@@ -1,0 +1,1 @@
+.menu{overflow:hidden;max-height:0px;transition:max-height .3s}.menu.active{display:block;max-height:200px}.icon{width:1rem;height:1rem;transition:transform .3s}.icon.upside-down{transform:rotate(180deg)}

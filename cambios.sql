@@ -1,0 +1,1 @@
+alter table personal_access_tokens add expires_at varchar(50) after last_used_at;

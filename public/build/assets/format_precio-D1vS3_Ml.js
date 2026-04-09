@@ -1,0 +1,1 @@
+function n(e){const r=Number(e);return Number.isNaN(r)||Math.round(r*1e3)===Math.round(r*100)*10?2:3}const o=e=>{const r=parseFloat(e);if(r==null||Number.isNaN(r))return"0,00€";const t=n(r);return`${r.toFixed(t).replace(".",",")}€`};export{o as f};

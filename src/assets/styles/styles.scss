@@ -1,0 +1,130 @@
+.switch-activo.v-selection-control--dirty .v-switch__track {
+  background-color: #5142A6 !important;
+  opacity: 1 !important;
+}
+
+.switch-activo.v-selection-control--dirty .v-switch__thumb {
+  background-color: #5142A6 !important;
+}
+
+.switch-activo .v-label {
+  color: #000000 !important;
+}
+
+.chip-activo {
+  background-color: #5142A6 !important;
+  color: #FAFAFA !important;
+  border-color: transparent !important;
+
+  .v-chip__overlay {
+    background-color: transparent !important;
+  }
+}
+
+.confirm-dialog__title {
+  background-color: #ffffff !important;
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+.v-card-actions .btn-confirm-dialog {
+  background-color: #DCFF2E !important;
+  color: #000000 !important;
+}
+
+.v-card-actions .btn-cancel-dialog {
+  background-color: rgb(var(--v-theme-secondary)) !important;
+  color: #FAFAFA !important;
+}
+
+.v-field.v-field--focused .v-field__outline .v-field__outline__start,
+.v-field.v-field--focused .v-field__outline .v-field__outline__end,
+.v-field.v-field--focused .v-field__outline .v-field__outline__notch {
+  border-color: #5142A6 !important;
+}
+
+.v-field.v-field--focused .v-label,
+.v-field.v-field--focused .v-field-label,
+.v-field.v-field--focused .v-field__overlay {
+  color: #5142A6 !important;
+}
+
+.v-field.v-field--focused .v-field__outline__notch::before,
+.v-field.v-field--focused .v-field__outline__notch::after {
+  border-color: #5142A6 !important;
+}
+
+.richtext-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.richtext-label {
+  font-weight: 600;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.icono-primario {
+  color: #5142A6 !important;
+}
+
+.btn-guardar {
+  background-color: #DCFF2E !important;
+  color: #000000 !important;
+
+  .v-btn__content {
+    color: #000000 !important;
+  }
+}
+
+.user-menu-list .v-list-item.v-list-item--active {
+  background-color: #CFC5FF !important;
+  color: #343434 !important;
+}
+
+.user-menu-list .v-list-item.v-list-item--active .v-list-item-title {
+  color: #343434 !important;
+}
+
+.email-dialog .v-card {
+  width: min(90vw, 900px) !important;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.email-dialog .v-card-text {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: calc(80vh - 200px);
+}
+
+.dialog-add-albaranes__title {
+  text-align: center;
+  font-weight: 600;
+  padding-block: 1rem;
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+.btn-confirmar-historial {
+  background-color: #DCFF2E !important;
+  color: #000000 !important;
+}
+
+.btn-cancelar-historial {
+  background-color: rgb(var(--v-theme-secondary)) !important;
+  color: #FAFAFA !important;
+}
+
+.historial-dialog .v-card {
+  width: min(90vw, 1000px) !important;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.historial-dialog .v-card-text {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: calc(80vh - 200px);
+}
