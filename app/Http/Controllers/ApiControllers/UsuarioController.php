@@ -188,7 +188,7 @@ class UsuarioController extends Controller
             $user->name = $usuario->name;
             $user->role = $usuario->role;
 
-            // Para empresa (role 2) nueva: email se asigna después del save como id@fidifactu.com
+            // Para empresa (role 2) nueva: email temporal único (dominio interno) hasta asignar el definitivo
             if ($usuario->role == 2 && $isNewUser) {
                 $user->email = 'temp-' . uniqid() . '@fidifactu.com'; // temporal único para cumplir unique antes del save
             } else {
@@ -231,7 +231,7 @@ class UsuarioController extends Controller
 
             $user->saveOrFail();
 
-            // Para empresa (role 2) nueva: asignar email definitivo id@fidifactu.com
+            // Para empresa (role 2) nueva: asignar email definitivo id@dominio-interno
             if ($usuario->role == 2 && $isNewUser) {
                 $user->email = $user->id . '@fidifactu.com';
                 $user->save();

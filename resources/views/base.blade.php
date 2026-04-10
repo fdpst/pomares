@@ -9,7 +9,7 @@
     <meta name="google" content="notranslate" />
 
     <!-- <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet"> -->
-    <title translate="no">fidifactu</title>
+    <title translate="no">Martí Pomares, S.L</title>
     <link rel="icon" type="image/png" href="/logo_menu.png" />
     <!-- Add Roboto font -->
     <link rel="stylesheet" type="text/css"

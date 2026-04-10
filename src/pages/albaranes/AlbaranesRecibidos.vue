@@ -151,7 +151,7 @@
         //descargamos todos los archivos
         array_archivos.forEach(element => {
           var archivo = document.createElement('a');
-          archivo.setAttribute('href', "https://app.fidifactu.com/storage/albaranes/recibidos/"+element);
+          archivo.setAttribute('href', "/storage/albaranes/recibidos/" + element);
           archivo.setAttribute('download', element);
           document.body.appendChild(archivo);
           archivo.click();

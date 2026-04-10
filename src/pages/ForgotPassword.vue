@@ -60,7 +60,7 @@ export default {
 <template>
   <RouterLink to="/">
     <div class="auth-logo d-flex align-center gap-x-3">
-      <img :src="logoTexto" alt="Fidifactu" class="auth-logo-img">
+      <img :src="logoTexto" alt="Martí Pomares, S.L" class="auth-logo-img">
     </div>
   </RouterLink>
 
@@ -97,7 +97,7 @@ export default {
       <VCard
         flat
         :max-width="500"
-        class="mt-12 mt-sm-0 pa-4 fidifactu-recover__card"
+        class="mt-12 mt-sm-0 pa-4 app-recover__card"
       >
         <VCardText>
           <h4 class="text-h4 mb-1">
@@ -123,12 +123,12 @@ export default {
                   color="#DCFF2E"
                   base-color="rgba(255, 255, 255, 0.8)"
                   :rules="[requiredValidator, emailValidator]"
-                  class="fidifactu-recover__input"
+                  class="app-recover__input"
                 />
               </VCol>
 
               <!-- errores -->
-              <h4 class="fidifactu-recover__error" v-if="error != null">
+              <h4 class="app-recover__error" v-if="error != null">
                 {{ error }}
               </h4>
 
@@ -138,7 +138,7 @@ export default {
                   block
                   type="submit"
                   :disabled="isloading"
-                  class="fidifactu-recover__submit"
+                  class="app-recover__submit"
                   color="#DCFF2E"
                 >
                   Recuperar
@@ -190,7 +190,7 @@ export default {
 }
 
 // Card styling
-.fidifactu-recover__card {
+.app-recover__card {
   background-color: transparent !important;
   
   .v-card-text {
@@ -199,20 +199,20 @@ export default {
 }
 
 // Títulos y texto dentro del card
-.fidifactu-recover__card .text-h4 {
+.app-recover__card .text-h4 {
   color: #DCFF2E !important;
 }
 
-.fidifactu-recover__card .mb-0 {
+.app-recover__card .mb-0 {
   color: #FAFAFA !important;
 }
 
-.fidifactu-recover__card p {
+.app-recover__card p {
   color: #FAFAFA !important;
 }
 
 // Inputs con estilo del login
-.fidifactu-recover__input {
+.app-recover__input {
   .v-field {
     border-radius: 16px;
     background-color: rgba(57, 26, 140, 0.65);
@@ -246,7 +246,7 @@ export default {
 }
 
 // Errores
-.fidifactu-recover__error {
+.app-recover__error {
   text-align: center;
   color: #DCFF2E;
   font-weight: 400;
@@ -254,7 +254,7 @@ export default {
 }
 
 // Botón con estilo del login
-.fidifactu-recover__submit {
+.app-recover__submit {
   background-color: #DCFF2E !important;
   color: #000000 !important;
   font-weight: 700;

@@ -92,7 +92,7 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
               v-show="!hideTitleAndIcon"
               class="app-logo-title leading-normal"
             >
-              fidifactu
+              Martí Pomares, S.L
             </h1>
           </Transition>
           
@@ -156,13 +156,18 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
 .app-logo {
   display: flex;
   align-items: center;
-  column-gap: 0.75rem;
+  column-gap: 0.5rem;
+  min-inline-size: 0;
 
   .app-logo-title {
-    font-size: 1.25rem;
+    font-size: 0.8125rem;
     font-weight: 600;
-    line-height: 1.75rem;
+    line-height: 1.35;
     color: #DCFF2E;
+    white-space: normal;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    max-inline-size: 100%;
   }
 }
 </style>
@@ -206,6 +211,8 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
 
   .app-title-wrapper {
     margin-inline-end: auto;
+    flex: 1 1 0;
+    min-inline-size: 0;
   }
 
   .nav-items {

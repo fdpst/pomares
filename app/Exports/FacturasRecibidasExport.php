@@ -41,7 +41,7 @@ FromCollection, WithHeadings,WithCustomStartCell,ShouldAutoSize,WithDrawings,Wit
     {
         $drawing = new Drawing();
         $drawing->setName('Logo');
-        $drawing->setDescription('fidifactu');
+        $drawing->setDescription('Martí Pomares, S.L');
         $drawing->setPath(public_path('/logo.jpg'));
         $drawing->setHeight(90);
         $drawing->setCoordinates('A1');
