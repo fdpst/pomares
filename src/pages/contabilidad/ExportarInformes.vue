@@ -21,7 +21,7 @@
                   },
                   {
                     value: 'recibidas',
-                    title: 'Recibidas',
+                    title: 'Autofacturas',
                   },
                   /*{
                     value: 3,

@@ -1,7 +1,7 @@
 <template>
     <VCard
         class="pb-10"
-        title="Lista de facturas recibidas">
+        title="Lista de autofacturas">
         <div class="ps-5 pe-5 pb-5">
             <VRow>
                 <VCol
@@ -27,25 +27,49 @@
                     >
                 </VCol>
             </VRow>
+
+            <VRow class="mt-2 align-end">
+                <VCol
+                    cols="12"
+                    md="4">
+                    <AppDateTimePicker
+                        v-model="fechaDesde"
+                        label="Fecha desde"
+                        prepend-icon="ri-calendar-fill"
+                    />
+                </VCol>
+                <VCol
+                    cols="12"
+                    md="4">
+                    <AppDateTimePicker
+                        v-model="fechaHasta"
+                        label="Fecha hasta"
+                        prepend-icon="ri-calendar-fill"
+                    />
+                </VCol>
+                <VCol
+                    cols="12"
+                    md="4"
+                    class="d-flex align-center pb-2">
+                    <VBtn
+                        variant="text"
+                        color="secondary"
+                        size="small"
+                        @click="limpiarFiltroFechas">
+                        Quitar filtro de fechas
+                    </VBtn>
+                </VCol>
+            </VRow>
         </div>
 
         <loader v-if="isloading"></loader>
 
         <VDataTable
             :headers="headers"
-            :items="facturaRecibidas"
+            :items="facturasRecibidasFiltradas"
             :search="search"
             item-key="id"
             class="elevation-1 mt-2">
-            <template v-slot:item.imagen="{item}">
-                <VIcon
-                    @click="callDown(item)"
-                    medium
-                    color="#5142A6"
-                    class="mr-2">
-                    ri-download-cloud-fill
-                </VIcon>
-            </template>
             <template v-slot:item.nro_factura="{item}">
                 <span v-if="item.nro_factura != null">
                     {{
@@ -62,7 +86,7 @@
             </template>
             <template v-slot:item.total="{item}">
                 <span v-if="item.total != null">
-                    {{ formatPrice(item.total) }}€
+                    {{ format_precio_autofactura(item.total) }}
                 </span>
             </template>
             <template v-slot:item.action="{item}">
@@ -90,8 +114,17 @@
                     small
                     class="mr-2"
                     color="orange"
-                    title="Duplicar factura">
+                    title="Duplicar autofactura">
                     mdi mdi-content-duplicate
+                </VIcon>
+
+                <VIcon
+                    @click="verPdfAutofactura(item)"
+                    small
+                    class="mr-2"
+                    color="primary"
+                    title="Ver PDF">
+                    ri-file-pdf-line
                 </VIcon>
             </template>
         </VDataTable>
@@ -106,7 +139,7 @@
     <ConfirmDialog
         v-model="modalDuplicar"
         color="info"
-        text="¿Está seguro de que desea crear una nueva factura con los datos de la factura seleccionada?"
+        text="¿Está seguro de que desea crear una nueva autofactura con los datos de la seleccionada?"
         @cancel="modalDuplicar = false"
         @confirm="
             () => {
@@ -118,6 +151,8 @@
 <script>
 import {localizePrice} from "@/components/Transformations";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { format_precio_autofactura } from "@/utils/format_precio.js";
+import { itemPasaFiltroFecha } from "@/utils/filtroFechaLista.js";
 
 export default {
     mixins: [gestorClienteMixin],
@@ -127,6 +162,8 @@ export default {
             modalDuplicar: false,
             item: "",
             search: "",
+            fechaDesde: null,
+            fechaHasta: null,
             facturaRecibidas: [],
             headers: [
                 {
@@ -138,17 +175,12 @@ export default {
                     value: "fecha",
                 },
                 {
-                    title: "Proveedor",
+                    title: "Distribuidor",
                     value: "proveedor.nombre",
                 },
                 {
                     title: "Descripción",
                     value: "descripcion",
-                },
-
-                {
-                    title: "Archivos",
-                    value: "imagen",
                 },
                 {
                     title: "Total",
@@ -167,30 +199,7 @@ export default {
     },
     methods: {
         localizePrice,
-        callDown(doc) {
-            let imagenes = JSON.parse(doc.imagen);
-            let originaName = window.location.origin + "/";
-            const ownerId = doc?.user_id ?? this.effectiveUserId;
-            let pathServer = "storage/recibos/userId_" + ownerId + "/";
-            let pathDoc = "";
-            let documentImagen = "";
-            for (var r = 0; r < imagenes?.length; r++) {
-                pathDoc = originaName + pathServer + imagenes[r];
-                documentImagen = imagenes[r];
-                this.downloadFiles(pathDoc, documentImagen);
-            }
-        },
-
-        downloadFiles(url, filename) {
-            fetch(url).then(function (t) {
-                return t.blob().then((b) => {
-                    var a = document.createElement("a");
-                    a.href = URL.createObjectURL(b);
-                    a.setAttribute("download", filename);
-                    a.click();
-                });
-            });
-        },
+        format_precio_autofactura,
         getFactRecibidas() {
             axios
                 .get(`api/facturas-recibidas`)
@@ -200,7 +209,7 @@ export default {
                         // console.log(this.facturaRecibidas)
                     },
                     (err) => {
-                        $toast.error("Error consultando facturaRecibidas");
+                        $toast.error("Error consultando autofacturas");
                     }
                 );
         },
@@ -216,42 +225,65 @@ export default {
             this.modalEliminar = false;
             this.item = "";
         },
+        limpiarFiltroFechas() {
+            this.fechaDesde = null;
+            this.fechaHasta = null;
+        },
+        verPdfAutofactura(item) {
+            axios
+                .get(`api/facturas-recibidas-pdf/${item.id}`, {
+                    params: { user_id: this.effectiveUserId },
+                    responseType: "blob",
+                })
+                .then((response) => {
+                    const blob = response.data;
+                    if (blob.type === "application/json") {
+                        blob.text().then((t) => {
+                            try {
+                                const j = JSON.parse(t);
+                                $toast.error(
+                                    j.error || j.message || "Error al generar PDF"
+                                );
+                            } catch {
+                                $toast.error("Error al generar PDF");
+                            }
+                        });
+                        return;
+                    }
+                    const nro =
+                        item.nro_factura && item.nro_factura !== "null"
+                            ? String(item.nro_factura).replace(
+                                  /[^a-zA-Z0-9_-]+/g,
+                                  "_"
+                              )
+                            : "sin_numero";
+                    const url = URL.createObjectURL(blob);
+                    const win = window.open(url, "_blank", "noopener,noreferrer");
+                    if (!win) {
+                        URL.revokeObjectURL(url);
+                        $toast.error(
+                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                        );
+                        return;
+                    }
+                    setTimeout(() => URL.revokeObjectURL(url), 120000);
+                })
+                .catch(() => {
+                    $toast.error("Error al generar PDF");
+                });
+        },
         deleteFac(item) {
             this.modalEliminar = false;
             axios.post(`api/facturas-recibidas-delete/${this.item.id}`).then(
                 (res) => {
                     this.getFactRecibidas();
-                    $toast.sucs("factura eliminada");
+                    $toast.sucs("Autofactura eliminada");
                     this.item = "";
                 },
                 (err) => {
-                    $toast.error("Error eliminando factura");
+                    $toast.error("Error eliminando autofactura");
                 }
             );
-        },
-        descargarArchivos(item) {
-            //quitamos todos los caracteres que no necesitamos
-            let archivos = item.imagen.replaceAll('"', "");
-            archivos = archivos.replaceAll("[", "");
-            archivos = archivos.replaceAll("]", "");
-
-            //convertimos en array
-            let array_archivos = archivos.split(",");
-            //descargamos todos los archivos
-            array_archivos.forEach((element) => {
-                var archivo = document.createElement("a");
-                archivo.setAttribute(
-                    "href",
-                    "/storage/documentos/" +
-                        "userId_" +
-                        (item?.user_id ?? this.effectiveUserId) +
-                        "recibidos/" +
-                        element
-                );
-                archivo.setAttribute("download", element);
-                document.body.appendChild(archivo);
-                archivo.click();
-            });
         },
         /*duplicarFacturaRecibida(){
       console.log('item', this.item)
@@ -290,6 +322,11 @@ export default {
                 return selectedCliente;
             }
             return this.user_id;
+        },
+        facturasRecibidasFiltradas() {
+            return this.facturaRecibidas.filter((row) =>
+                itemPasaFiltroFecha(row.fecha, this.fechaDesde, this.fechaHasta)
+            );
         },
     },
 };

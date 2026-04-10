@@ -13,7 +13,7 @@ const routes = [
 		meta: {
 			Auth: true,
 			venta: 1,
-			titulo:"Artículos Venta",
+			titulo:"Artículos (venta)",
 			lista: `lista-servicios`
 		}
 	},
@@ -25,7 +25,7 @@ const routes = [
 		meta: {
 			Auth: true,
 			venta: 0,
-			titulo:"Artículos Compra",
+			titulo:"Artículos",
 			lista: `lista-productos`
 		}
 	},
@@ -37,7 +37,7 @@ const routes = [
 		meta: {
 			Auth: true,
 			venta: 1,
-			titulo:"Artículos Venta",
+			titulo:"Artículos (venta)",
 			form:"guardar-servicio"
 		}
 	},
@@ -49,7 +49,7 @@ const routes = [
 		meta: {
 			Auth: true,
 			venta: 0,
-			titulo:"Articulos Compra",
+			titulo:"Artículos",
 			form:"guardar-productos"
 		}
 	}

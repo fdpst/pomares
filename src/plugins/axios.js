@@ -4,15 +4,34 @@ window.axios = axios
 
 axios.defaults.headers.common['Content-Type'] = 'application/json'
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-axios.defaults.headers.common.Authorization = `Bearer ${localStorage.getItem('id_token')}`
 axios.defaults.withCredentials = true;
 
-// Configuración para producción
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || ''
+// Raíz de la app Laravel (evita que con URL .../lista-proveedores/ las rutas tipo "api/foo"
+// se resuelvan como .../lista-proveedores/api/foo).
+const viteBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const metaApp = document.querySelector('meta[name="app-url"]')?.getAttribute('content')?.trim().replace(/\/$/, '') || ''
+axios.defaults.baseURL = viteBase || metaApp || ''
 
 // Interceptor para agregar cliente_id cuando el usuario es gestor
 axios.interceptors.request.use(
   config => {
+    // FormData: no fijar Content-Type (axios/navegador añaden multipart + boundary).
+    // Si queda application/json por defecto o multipart sin boundary, Laravel no recibe los campos.
+    if (config.data instanceof FormData) {
+      if (typeof config.headers.delete === 'function') {
+        config.headers.delete('Content-Type')
+      } else {
+        delete config.headers['Content-Type']
+      }
+    }
+
+    const token = localStorage.getItem('id_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    } else {
+      delete config.headers.Authorization
+    }
+
     const role = parseInt(localStorage.getItem('role'))
     const selectedClienteId = localStorage.getItem('selected_cliente_id')
     

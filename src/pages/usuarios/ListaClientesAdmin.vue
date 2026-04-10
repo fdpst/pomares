@@ -229,7 +229,7 @@ export default {
                         }
                     },
                     (err) => {
-                        $toast.error("Error consultando Clientes");
+                        $toast.error("Error consultando empresas");
                     }
                 );
         },

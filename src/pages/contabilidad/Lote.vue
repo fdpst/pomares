@@ -349,18 +349,18 @@ export default {
                 $toast.warn('No hay archivo ZIP disponible para facturas enviadas');
             }
             
-            // Intentar descargar facturas recibidas
+            // Intentar descargar autofacturas
             if (vm.downloadZipsUrls.facturas_recibidas && vm.downloadZipsUrls.facturas_recibidas.trim() !== '') {
                 vm.downloadFiles(vm.downloadZipsUrls.facturas_recibidas, 'facturas_recibidas.zip')
                     .then(() => {
                         descargasRealizadas++;
                     })
                     .catch((error) => {
-                        console.error('Error descargando facturas recibidas:', error);
-                        $toast.error('Error al descargar facturas recibidas');
+                        console.error('Error descargando autofacturas:', error);
+                        $toast.error('Error al descargar autofacturas');
                     });
             } else {
-                $toast.warn('No hay archivo ZIP disponible para facturas recibidas');
+                $toast.warn('No hay archivo ZIP disponible para autofacturas');
             }
         },
         downloadFiles(url, filename) {
@@ -507,7 +507,7 @@ export default {
                     if (recibidas && recibidas.message) {
                         $toast.warn(recibidas.message);
                     } else {
-                        $toast.warn("No se encontraron facturas recibidas en el rango de fechas especificado.");
+                        $toast.warn("No se encontraron autofacturas en el rango de fechas especificado.");
                     }
                 }
                 
@@ -531,7 +531,7 @@ export default {
                     })));
                 }
                 
-                // Procesar facturas recibidas
+                // Procesar autofacturas
                 if (todas.recibidas && todas.recibidas.facturasRecibidasGet && Array.isArray(todas.recibidas.facturasRecibidasGet)) {
                     if (todas.recibidas.facturasRecibidasGet.length > 0) {
                         // Verificar si es array de objetos o array de strings
@@ -578,7 +578,7 @@ export default {
                     }));
                 }
             } catch (error) {
-                console.error('Error cargando detalles de facturas recibidas:', error);
+                console.error('Error cargando detalles de autofacturas:', error);
             }
         },
         descargarZip(tipo) {

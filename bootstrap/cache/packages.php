@@ -35,6 +35,13 @@
       0 => 'Intervention\\Image\\ImageServiceProvider',
     ),
   ),
+  'kitloong/laravel-migrations-generator' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'KitLoong\\MigrationsGenerator\\MigrationsGeneratorServiceProvider',
+    ),
+  ),
   'laravel/sanctum' => 
   array (
     'providers' => 
@@ -74,11 +81,36 @@
       0 => 'Carbon\\Laravel\\ServiceProvider',
     ),
   ),
+  'nunomaduro/collision' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
+    ),
+  ),
   'nunomaduro/termwind' => 
   array (
     'providers' => 
     array (
       0 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    ),
+  ),
+  'orangehill/iseed' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Orangehill\\Iseed\\IseedServiceProvider',
+    ),
+  ),
+  'spatie/laravel-ignition' => 
+  array (
+    'aliases' => 
+    array (
+      'Flare' => 'Spatie\\LaravelIgnition\\Facades\\Flare',
+    ),
+    'providers' => 
+    array (
+      0 => 'Spatie\\LaravelIgnition\\IgnitionServiceProvider',
     ),
   ),
 );

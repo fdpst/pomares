@@ -1,5 +1,5 @@
 <template>
-    <VCard title="Nueva Factura Recibida">
+    <VCard title="Nueva autofactura">
         <VDivider></VDivider>
 
         <loader v-if="isloading"></loader>
@@ -38,7 +38,7 @@
                             :items="proveedores"
                             item-title="nombre"
                             item-value="id"
-                            label="Proveedor"
+                            label="Distribuidor"
                             :rules="[requiredValidator]"></VSelect>
                     </VCol>
 
@@ -70,7 +70,7 @@
                             v-model="servicio.id_servicio"
                             item-title="descripcion"
                             item-value="id"
-                            label="Artículo Compra"
+                            label="Artículo"
                             required></VAutocomplete>
                     </VCol>
                     <VCol
@@ -186,8 +186,11 @@
                             hide-default-footer
                             item-key="id"
                             class="elevation-1">
+                            <template v-slot:item.cantidad="{ item }">{{
+                                formatCantidadFactura(item.cantidad)
+                            }}</template>
                             <template v-slot:item.precio="{item}"
-                                >{{ formatPrice(item.precio) }}€</template
+                                >{{ format_precio_autofactura(item.precio) }}</template
                             >
                             <template v-slot:item.dcto="{item}"
                                 >{{ item.dcto }}%</template
@@ -196,7 +199,7 @@
                                 >{{ item.iva }}%</template
                             >
                             <template v-slot:item.total="{item}"
-                                >{{ formatPrice(item.total) }}€</template
+                                >{{ format_precio_autofactura(item.total) }}</template
                             >
                             <template v-slot:item.action="{item}">
                                 <VIcon
@@ -232,17 +235,6 @@
                 <VRow>
                     <VCol
                         cols="12"
-                        md="5">
-                        <VFileInput
-                            filled
-                            prepend-icon="ri-file-image-line"
-                            ref="file"
-                            multiple
-                            label="Imagen"
-                            v-model="facturaRec.imagen"></VFileInput>
-                    </VCol>
-                    <VCol
-                        cols="12"
                         md="4">
                         <VSelect
                             v-model="facturaRec.retencion_id"
@@ -255,35 +247,41 @@
                     </VCol>
                     <VCol
                         cols="12"
-                        md="3">
+                        md="8">
                         <div class="d-flex justify-end">
                             <div
                                 class="flex-column"
                                 style="width: 90%">
                                 <p class="d-flex">
-                                    <strong>Subtotal:</strong
+                                    <strong>Importe bruto:</strong
                                     ><VSpacer></VSpacer>
-                                    {{ format_precio(subtotal) }}
+                                    {{ format_precio_autofactura(importeBruto) }}
                                 </p>
-
-                                <div v-for="(item, index) in totales_ivas">
-                                    <p
-                                        class="d-flex"
-                                        v-bind:key="index">
-                                        <strong>{{ item.titulo }}</strong>
-                                        <VSpacer></VSpacer>
-                                        {{ format_precio(item.value) }}
-                                    </p>
-                                </div>
+                                <p class="d-flex">
+                                    <strong>Base imponible:</strong
+                                    ><VSpacer></VSpacer>
+                                    {{ format_precio_autofactura(subtotal) }}
+                                </p>
+                                <p class="d-flex">
+                                    <strong>IVA 21%:</strong
+                                    ><VSpacer></VSpacer>
+                                    21 %
+                                </p>
+                                <p class="d-flex">
+                                    <strong>Cuota:</strong
+                                    ><VSpacer></VSpacer>
+                                    {{ format_precio_autofactura(cuotaIva) }}
+                                </p>
                                 <p class="d-flex">
                                     <strong>Retención:</strong
                                     ><VSpacer></VSpacer> -{{
-                                        format_precio(retencion)
+                                        format_precio_autofactura(retencion)
                                     }}
                                 </p>
                                 <p class="d-flex">
-                                    <strong>Total:</strong><VSpacer></VSpacer>
-                                    {{ format_precio(total) }}
+                                    <strong>Total FRA:</strong
+                                    ><VSpacer></VSpacer>
+                                    {{ format_precio_autofactura(total) }}
                                 </p>
                             </div>
                         </div>
@@ -334,7 +332,8 @@
 
 <script>
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
-import {UploadFilesService} from "../../utils/UploadFilesService";
+import { format_precio_autofactura } from "@/utils/format_precio.js";
+
 export default {
     components: {
         DialogArticulos,
@@ -345,8 +344,6 @@ export default {
             dialog: false,
             servicio_dialog: {},
             servicios: [],
-            menu: false,
-            uploadPercentage: 0,
             proveedores: [],
             retenciones: [],
             facturaRec: {
@@ -354,15 +351,11 @@ export default {
                 fecha: new Date().toISOString().substr(0, 10),
                 descripcion: "",
                 proveedor_id: null,
-                imagen: false,
                 user_id: null,
                 servicios: [],
                 retencion_id: null,
                 nro_factura: null,
             },
-            files: [],
-            imagePreview: [],
-
             servicio: {
                 id: null,
                 concepto: "",
@@ -381,12 +374,12 @@ export default {
                     value: "concepto",
                 },
                 {
-                    title: "Precio",
-                    value: "precio",
-                },
-                {
                     title: "Cantidad",
                     value: "cantidad",
+                },
+                {
+                    title: "Precio",
+                    value: "precio",
                 },
                 {
                     title: "Descuento",
@@ -397,7 +390,7 @@ export default {
                     value: "iva",
                 },
                 {
-                    title: "Total",
+                    title: "Importe",
                     value: "total",
                 },
                 {
@@ -424,6 +417,19 @@ export default {
     },
 
     methods: {
+        format_precio_autofactura,
+        formatCantidadFactura(val) {
+            const n = Number(val);
+            if (Number.isNaN(n)) {
+                return "";
+            }
+            return Number.isInteger(n)
+                ? String(n)
+                : n.toLocaleString("es-ES", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 4,
+                  });
+        },
         getServicios() {
             axios
                 .get(
@@ -434,27 +440,9 @@ export default {
                         this.servicios = res.data;
                     },
                     (err) => {
-                        $toast.error("Error consultando servicios");
+                        $toast.error("Error consultando artículos");
                     }
                 );
-        },
-        setFiles(files) {
-            const filesPreview = files;
-
-            Object.keys(filesPreview).forEach((i) => {
-                const file = filesPreview[i];
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.imagePreview.push(reader.result);
-                };
-                this.imagePreview = [];
-                reader.readAsDataURL(file);
-            });
-
-            if (files !== undefined) {
-                this.files = files;
-                this.disableUploadButtonImage = false;
-            }
         },
         getProveedores() {
             axios.get(`api/get-proveedores/` + this.facturaRec.user_id).then(
@@ -462,7 +450,7 @@ export default {
                     this.proveedores = res.data;
                 },
                 (res) => {
-                    $toast.error("Error consultando Proveedores");
+                    $toast.error("Error consultando distribuidores");
                 }
             );
         },
@@ -489,8 +477,6 @@ export default {
             formData.append("descripcion", this.facturaRec.descripcion);
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
             formData.append("retencion_id", this.facturaRec.retencion_id);
-            UploadFilesService.validateUploadedFile(this.facturaRec.imagen);
-            formData.append("imagen", this.facturaRec.imagen);
             formData.append("total", this.total);
             formData.append("nro_factura", this.facturaRec.nro_factura);
             formData.append(
@@ -498,41 +484,21 @@ export default {
                 JSON.stringify(this.facturaRec.servicios)
             );
 
-            if (this.facturaRec.imagen == false) {
-            } else {
-                for (let fileSave of this.facturaRec.imagen) {
-                    UploadFilesService.validateUploadedFile(fileSave);
-                    formData.append("imagen[]", fileSave, fileSave.name);
-                }
-            }
-
             axios
                 .post(`api/facturas-recibidas`, formData, {
                     headers: {
                         "Content-Type": "multipart/form-data",
                     },
-                    onUploadProgress: function (progressEvent) {
-                        this.uploadPercentage = parseInt(
-                            Math.round(
-                                (progressEvent.loaded / progressEvent.total) *
-                                    100
-                            )
-                        );
-                    }.bind(this),
                 })
                 .then(
                     (res) => {
-                        $toast.sucs("Albaran guardado con exito");
+                        $toast.sucs("Autofactura guardada con éxito");
                         this.$router.push("/lista-facturas-recibidas");
                     },
                     (res) => {
-                        $toast.error("Error guardando albaran");
+                        $toast.error("Error guardando autofactura");
                     }
                 );
-        },
-        handleFileUploadPdf(pdf) {
-            this.files = pdf;
-            this.facturaRec.imagen = pdf;
         },
         SaveTipoServicio(data) {
             this.servicios.push(data);
@@ -566,7 +532,7 @@ export default {
             this.updateOrPush(this.servicio);
             this.calcularTotales(this.facturaRec.servicios);
             this.resetServicio();
-            $toast.sucs("Servicio Añadido");
+            $toast.sucs("Artículo añadido");
         },
         updateOrPush(servicio) {
             // let index = this.facturaRec.servicios.findIndex(
@@ -613,6 +579,13 @@ export default {
         },
 
         calcularTotales(lista_servicios) {
+            const importe_bruto = lista_servicios.reduce((acc, servicio) => {
+                const c = parseFloat(servicio.cantidad);
+                const p = parseFloat(servicio.precio);
+                const bruto = (Number.isNaN(c) ? 0 : c) * (Number.isNaN(p) ? 0 : p);
+                return acc + bruto;
+            }, 0);
+
             let sub_total = lista_servicios.reduce((acc, servicio) => {
                 let subtotal = servicio.cantidad * servicio.precio;
                 let dcto = (subtotal * servicio.dcto) / 100;
@@ -650,21 +623,28 @@ export default {
                 };
             });
 
-            let retencion_procentaje = this.retenciones.find(
+            const cuota = this.totales_ivas.reduce((acc, row) => acc + row.value, 0);
+
+            const retRow = this.retenciones?.find(
                 (element) => element.id == this.facturaRec.retencion_id
-            ).descripcion;
+            );
+            const retencion_procentaje = retRow?.descripcion;
             let retencion_valor = 0;
             if (typeof retencion_procentaje === "number") {
                 retencion_valor = (sub_total * retencion_procentaje) / 100;
             }
 
             let total = sub_total - retencion_valor;
-            this.subtotal = sub_total;
-            this.retencion = retencion_valor;
-            // Sumar el total general con los totales de IVA
-            this.total =
-                total +
-                this.totales_ivas.reduce((acc, iva) => acc + iva.value, 0);
+            const sumaIvas = this.totales_ivas.reduce(
+                (acc, iva) => acc + iva.value,
+                0
+            );
+            const totalFra = total + sumaIvas;
+            this.importeBruto = Math.round(importe_bruto * 100) / 100;
+            this.subtotal = Math.round(sub_total * 100) / 100;
+            this.cuotaIva = Math.round(cuota * 100) / 100;
+            this.retencion = Math.round(retencion_valor * 100) / 100;
+            this.total = Math.round(totalFra * 100) / 100;
         },
         getArrayIva() {
             axios.get(`api/get-iva`).then(

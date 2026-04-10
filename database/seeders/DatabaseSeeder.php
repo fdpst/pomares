@@ -21,10 +21,10 @@ class DatabaseSeeder extends Seeder
         $this->call(CategoriaCuentaContableTableSeeder::class);
         $this->call(FormasPagoTableSeeder::class);
         $this->call(IvaSeeder::class);
-       /*$this->call(GestorDocumentalTableSeeder::class);
+       $this->call(GestorDocumentalTableSeeder::class);
        $this->call(DragTableSeeder::class);
        $this->call(IngresosSeed::class);
-       $this->call(ProvinciasSeeder::class);*/
+       $this->call(ProvinciasSeeder::class);
       
         
     }

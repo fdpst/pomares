@@ -11,6 +11,7 @@ import rutas_morosos from "./rutas_morosos";
 import rutas_principales from "./rutas_principales";
 import rutas_proveedores from "./rutas_proveedores";
 import rutas_recibos from "./rutas_recibos";
+import rutas_liquidaciones from "./rutas_liquidaciones";
 import rutas_usuarios from "./rutas_usuarios";
 
 import Error from "@/pages/Error.vue";
@@ -32,6 +33,7 @@ const routes = [
     ...rutas_proveedores,
     ...rutas_albaranes,
     ...rutas_recibos,
+    ...rutas_liquidaciones,
     ...rutas_contabilidad,
     ...rutas_morosos,
     ...rutas_usuarios,
@@ -66,7 +68,44 @@ const router = createRouter({
     routes,
 });
 
+/** Rutas desactivadas en UI para todos los roles (menú + acceso directo). */
+const DISABLED_ROUTE_NAMES = new Set([
+    "lista-clientes",
+    "guardar-cliente",
+    "lista-albaranes-enviados",
+    "form-albaranes-enviados",
+    "form-albaranes-enviados-update",
+    "lista-albaranes-recibidos",
+    "form-albaranes-recibidos",
+    "form-albaranes-recibidos-update",
+    "guardar-recibo",
+    "lista-recibos",
+    "lista-facturas",
+    "lista-facturas-rectificativas",
+    "lista-facturas-proforma",
+    "lista-notas",
+    "enviar-facturas",
+    "contabilidad",
+    "exportar-informe",
+    "lista-ingresos",
+    "guardar-ingreso",
+    "lista-gastos",
+    "guardar-gasto",
+    "update-gasto",
+    "tipos-gasto",
+    "lista-libro-diario",
+    "guardar-libro-diario",
+    "reporte-iva",
+    "morosos",
+    "lista-servicios",
+    "guardar-servicio",
+]);
+
 router.beforeEach((to) => {
+    if (to.name && DISABLED_ROUTE_NAMES.has(String(to.name))) {
+        return { name: "error" };
+    }
+
     if (to.meta.Auth) {
         const authUser = localStorage.getItem("role");
         const id_token = localStorage.getItem("id_token");

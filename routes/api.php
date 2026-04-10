@@ -88,6 +88,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::post('save-proveedor', 'ProveedorController@saveProveedor');
   Route::get('delete-proveedor/{proveedor_id}', 'ProveedorController@deleteProveedor');
   Route::get('get-last-proveedor-id', 'ProveedorController@getLastId');
+  Route::get('proveedor-comisiones/{proveedor_id}', 'ProveedorComisionController@index');
+  Route::post('proveedor-comisiones', 'ProveedorComisionController@store');
+  Route::post('proveedor-comisiones-update/{id}', 'ProveedorComisionController@update');
+  Route::get('delete-proveedor-comision/{id}', 'ProveedorComisionController@destroy');
   /*Rutas Servicio*/
   Route::get('get-servicios', 'ServicioController@getServicios');
   Route::get('get-servicios/{user_id}', 'ServicioController@getServicios');
@@ -146,6 +150,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('delete-factura-proforma/{factura_id}', 'FacturaController@deleteFacturaProforma'); // proforma
   Route::get('facturas-recibidas', 'FacturaRecibidasController@index');
   Route::get('facturas-recibidas-show/{idFac}', 'FacturaRecibidasController@show');
+  Route::get('facturas-recibidas-pdf/{id}', 'FacturaRecibidasController@pdf');
   Route::post('facturas-recibidas', 'FacturaRecibidasController@store');
   Route::post('facturas-recibidas-update/{idFac}', 'FacturaRecibidasController@update');
   Route::post('facturas-recibidas-delete/{idFactRec}', 'FacturaRecibidasController@destroy');
@@ -153,6 +158,16 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::post('duplicar-factura-recibida', 'FacturaRecibidasController@duplicarFactura');
 
   Route::get('get-retencion', 'FacturaRecibidasController@getRetencion');
+
+  /* Liquidaciones (módulo independiente de facturas recibidas) */
+  Route::get('liquidaciones', 'LiquidacionesController@index');
+  Route::get('liquidaciones-siguiente-numero', 'LiquidacionesController@siguienteNumero');
+  Route::get('liquidaciones-show/{idFac}', 'LiquidacionesController@show');
+  Route::post('liquidaciones', 'LiquidacionesController@store');
+  Route::post('liquidaciones-update/{idFac}', 'LiquidacionesController@update');
+  Route::post('liquidaciones-delete/{idLiq}', 'LiquidacionesController@destroy');
+  Route::post('duplicar-liquidacion', 'LiquidacionesController@duplicarLiquidacion');
+  Route::post('liquidaciones-factura-comisiones', 'LiquidacionesController@crearFacturaComisiones');
 
   Route::post('export-excel', 'FacturaController@exportExcel');
 

@@ -580,7 +580,7 @@ class LoteController extends Controller
           }
 
           // Cargar relaciones de proveedor y items antes de procesar
-          $facRecibidas->load('proveedor', 'items');
+          $facRecibidas->load(['proveedor.provincia', 'items']);
           
           // Obtener información del usuario para el PDF
           $user = User::where('id', $userId)->with('provincia')->first();
@@ -662,7 +662,8 @@ class LoteController extends Controller
                          $pdf = PDF::loadView('pdf.factura_recibida_individual', [
                               'factura' => $facturaRecibida,
                               'items' => $facturaRecibida->items,
-                              'userLog' => $user
+                              'userLog' => $user,
+                              'tituloPdf' => 'FACTURA',
                          ])->setPaper('a4', 'portrait');
                          
                          file_put_contents($pdfPath, $pdf->output());

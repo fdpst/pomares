@@ -37,6 +37,16 @@ class Proveedor extends Model
     }
 
     public function cuentaContable(){
-      return $this->hasOne(CuentaContable::class,'id','id_cuenta_contable');
+        return $this->hasOne(CuentaContable::class,'id','id_cuenta_contable');
+    }
+
+    public function provincia()
+    {
+        return $this->belongsTo(Provincia::class, 'id_provincia');
+    }
+
+    public function comisiones()
+    {
+        return $this->hasMany(ProveedorComision::class, 'proveedor_id');
     }
 }

@@ -1,5 +1,5 @@
 <template>
-    <VCard title="Editar Factura Recibida">
+    <VCard title="Editar autofactura">
         <VDivider></VDivider>
 
         <loader v-if="isloading"></loader>
@@ -35,7 +35,7 @@
                             :items="proveedores"
                             item-title="nombre"
                             item-value="id"
-                            label="Proveedor"></VSelect>
+                            label="Distribuidor"></VSelect>
                     </VCol>
 
                     <VCol
@@ -66,7 +66,7 @@
                             v-model="servicio.id_servicio"
                             item-title="descripcion"
                             item-value="id"
-                            label="Servicio"
+                            label="Artículo"
                             required></VAutocomplete>
                     </VCol>
                     <VCol
@@ -182,8 +182,11 @@
                             hide-default-footer
                             item-key="id"
                             class="elevation-1">
+                            <template v-slot:item.cantidad="{ item }">{{
+                                formatCantidadFactura(item.cantidad)
+                            }}</template>
                             <template v-slot:item.precio="{item}">{{
-                                format_precio(item.precio)
+                                format_precio_autofactura(item.precio)
                             }}</template>
                             <template v-slot:item.dcto="{item}"
                                 >{{ item.dcto }}%</template
@@ -228,17 +231,6 @@
                 <VRow>
                     <VCol
                         cols="12"
-                        md="5">
-                        <VFileInput
-                            filled
-                            prepend-icon="ri-file-image-line"
-                            ref="file"
-                            multiple
-                            label="Imagen"
-                            v-model="modeloImagenesNews"></VFileInput>
-                    </VCol>
-                    <VCol
-                        cols="12"
                         md="4">
                         <VSelect
                             v-model="facturaRec.retencion_id"
@@ -251,34 +243,41 @@
                     </VCol>
                     <VCol
                         cols="12"
-                        md="3">
+                        md="8">
                         <div class="d-flex justify-end">
                             <div
                                 class="flex-column"
                                 style="width: 90%">
                                 <p class="d-flex">
-                                    <strong>Subtotal:</strong
+                                    <strong>Importe bruto:</strong
                                     ><VSpacer></VSpacer>
-                                    {{ format_precio(subtotal) }}
+                                    {{ format_precio_autofactura(importeBruto) }}
                                 </p>
-                                <div v-for="(item, index) in totales_ivas">
-                                    <p
-                                        class="d-flex"
-                                        v-bind:key="index">
-                                        <strong>{{ item.titulo }}</strong
-                                        ><VSpacer></VSpacer>
-                                        {{ format_precio(item.value) }}
-                                    </p>
-                                </div>
+                                <p class="d-flex">
+                                    <strong>Base imponible:</strong
+                                    ><VSpacer></VSpacer>
+                                    {{ format_precio_autofactura(subtotal) }}
+                                </p>
+                                <p class="d-flex">
+                                    <strong>IVA 21%:</strong
+                                    ><VSpacer></VSpacer>
+                                    21 %
+                                </p>
+                                <p class="d-flex">
+                                    <strong>Cuota:</strong
+                                    ><VSpacer></VSpacer>
+                                    {{ format_precio_autofactura(cuotaIva) }}
+                                </p>
                                 <p class="d-flex">
                                     <strong>Retención:</strong
                                     ><VSpacer></VSpacer> -{{
-                                        format_precio(retencion)
+                                        format_precio_autofactura(retencion)
                                     }}
                                 </p>
                                 <p class="d-flex">
-                                    <strong>Total:</strong><VSpacer></VSpacer>
-                                    {{ format_precio(total) }}
+                                    <strong>Total FRA:</strong
+                                    ><VSpacer></VSpacer>
+                                    {{ format_precio_autofactura(total) }}
                                 </p>
                             </div>
                         </div>
@@ -337,6 +336,16 @@
                         :disabled="isloading"
                         >Duplicar</VBtn
                     >
+
+                    <VBtn
+                        rounded="pill"
+                        variant="outlined"
+                        color="primary"
+                        class="ml-1"
+                        :disabled="isloading || !facturaRec.id"
+                        @click="verPdfAutofactura">
+                        Ver PDF
+                    </VBtn>
                 </VRow>
             </VCardText>
         </VForm>
@@ -348,7 +357,7 @@
                 <VCardTitle
                     style="background-color: #2196f3"
                     class="text-h5 text-center pa-4"
-                    >Duplicar Factura Recibida</VCardTitle
+                    >Duplicar autofactura</VCardTitle
                 >
                 <VCardText class="text-center pt-6">
                     <h5 class="text-h5">
@@ -386,7 +395,7 @@
 
 <script>
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
-import {UploadFilesService} from "../../utils/UploadFilesService";
+import { format_precio_autofactura } from "@/utils/format_precio.js";
 
 export default {
     components: {
@@ -394,8 +403,6 @@ export default {
     },
     data() {
         return {
-            menu: false,
-            uploadPercentage: 0,
             proveedores: [],
             retenciones: [],
             facturaRec: {
@@ -403,16 +410,12 @@ export default {
                 fecha: new Date().toISOString().substr(0, 10),
                 descripcion: "",
                 proveedor_id: "",
-                imagen: false,
+                imagen: null,
                 user_id: null,
                 items: [],
                 retencion_id: null,
                 nro_factura: null,
             },
-
-            files: [],
-            imagePreview: [],
-            modeloImagenesNews: [],
 
             servicio: {
                 id: null,
@@ -431,12 +434,12 @@ export default {
                     value: "concepto",
                 },
                 {
-                    title: "Precio",
-                    value: "precio",
-                },
-                {
                     title: "Cantidad",
                     value: "cantidad",
+                },
+                {
+                    title: "Precio",
+                    value: "precio",
                 },
                 {
                     title: "Descuento",
@@ -447,7 +450,7 @@ export default {
                     value: "iva",
                 },
                 {
-                    title: "Total",
+                    title: "Importe",
                     value: "total",
                 },
                 {
@@ -457,6 +460,8 @@ export default {
                 },
             ],
             subtotal: 0,
+            importeBruto: 0,
+            cuotaIva: 0,
             retencion: 0,
             total: 0,
             totales_ivas: [],
@@ -484,6 +489,19 @@ export default {
     },
 
     methods: {
+        format_precio_autofactura,
+        formatCantidadFactura(val) {
+            const n = Number(val);
+            if (Number.isNaN(n)) {
+                return "";
+            }
+            return Number.isInteger(n)
+                ? String(n)
+                : n.toLocaleString("es-ES", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 4,
+                  });
+        },
         getServicios() {
             axios
                 .get(
@@ -494,7 +512,7 @@ export default {
                         this.servicios = res.data;
                     },
                     (err) => {
-                        $toast.error("Error consultando servicios");
+                        $toast.error("Error consultando artículos");
                     }
                 );
         },
@@ -523,25 +541,6 @@ export default {
                 });
             });
         },
-        setFiles(files) {
-            const filesPreview = files;
-
-            Object.keys(filesPreview).forEach((i) => {
-                const file = filesPreview[i];
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.imagePreview.push(reader.result);
-                };
-                this.imagePreview = [];
-                reader.readAsDataURL(file);
-            });
-
-            if (files !== undefined) {
-                this.files = files;
-                this.disableUploadButtonImage = false;
-            }
-        },
-
         facturaRecById(id) {
             axios.get(`api/facturas-recibidas-show/` + id).then(
                 (res) => {
@@ -555,7 +554,7 @@ export default {
                     this.calcularTotales(this.facturaRec.items);
                 },
                 (res) => {
-                    $toast.error("Error consultando Proveedores");
+                    $toast.error("Error consultando distribuidores");
                 }
             );
         },
@@ -566,7 +565,7 @@ export default {
                     this.proveedores = res.data;
                 },
                 (res) => {
-                    $toast.error("Error consultando Proveedores");
+                    $toast.error("Error consultando distribuidores");
                 }
             );
         },
@@ -579,6 +578,54 @@ export default {
             }
         },
 
+        verPdfAutofactura() {
+            if (!this.facturaRec.id) {
+                return;
+            }
+            axios
+                .get(`api/facturas-recibidas-pdf/${this.facturaRec.id}`, {
+                    params: { user_id: this.effectiveUserId },
+                    responseType: "blob",
+                })
+                .then((response) => {
+                    const blob = response.data;
+                    if (blob.type === "application/json") {
+                        blob.text().then((t) => {
+                            try {
+                                const j = JSON.parse(t);
+                                $toast.error(
+                                    j.error || j.message || "Error al generar PDF"
+                                );
+                            } catch {
+                                $toast.error("Error al generar PDF");
+                            }
+                        });
+                        return;
+                    }
+                    const nro =
+                        this.facturaRec.nro_factura &&
+                        this.facturaRec.nro_factura !== "null"
+                            ? String(this.facturaRec.nro_factura).replace(
+                                  /[^a-zA-Z0-9_-]+/g,
+                                  "_"
+                              )
+                            : "sin_numero";
+                    const url = URL.createObjectURL(blob);
+                    const win = window.open(url, "_blank", "noopener,noreferrer");
+                    if (!win) {
+                        URL.revokeObjectURL(url);
+                        $toast.error(
+                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                        );
+                        return;
+                    }
+                    setTimeout(() => URL.revokeObjectURL(url), 120000);
+                })
+                .catch(() => {
+                    $toast.error("Error al generar PDF");
+                });
+        },
+
         saveFactRecibidas() {
             let formData = new FormData();
 
@@ -588,18 +635,9 @@ export default {
             formData.append("descripcion", this.facturaRec.descripcion);
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
             formData.append("retencion_id", this.facturaRec.retencion_id);
-            UploadFilesService.validateUploadedFile(this.modeloImagenesNews);
-            formData.append("imagen", this.modeloImagenesNews);
             formData.append("total", this.total);
             formData.append("nro_factura", this.facturaRec.nro_factura);
             formData.append("servicios", JSON.stringify(this.facturaRec.items));
-
-            if (this.modeloImagenesNews.length > 0) {
-                for (let fileSave of this.modeloImagenesNews) {
-                    UploadFilesService.validateUploadedFile(fileSave);
-                    formData.append("imagen[]", fileSave, fileSave.name);
-                }
-            }
 
             axios
                 .post(
@@ -609,32 +647,19 @@ export default {
                         headers: {
                             "Content-Type": "multipart/form-data",
                         },
-                        onUploadProgress: function (progressEvent) {
-                            this.uploadPercentage = parseInt(
-                                Math.round(
-                                    (progressEvent.loaded /
-                                        progressEvent.total) *
-                                        100
-                                )
-                            );
-                        }.bind(this),
                     }
                 )
                 .then(
                     (res) => {
-                        $toast.sucs("Albaran guardado con exito");
+                        $toast.sucs("Autofactura guardada con éxito");
                         this.$router.push("/lista-facturas-recibidas");
                     },
                     (res) => {
-                        $toast.error("Error guardando albaran");
+                        $toast.error("Error guardando autofactura");
                     }
                 );
         },
 
-        handleFileUploadPdf(pdf) {
-            this.files = pdf;
-            this.facturaRec.imagen = pdf;
-        },
         SaveTipoServicio(data) {
             this.servicios.push(data);
             this.servicio.id_servicio = data.id;
@@ -669,7 +694,7 @@ export default {
             this.updateOrPush(this.servicio);
             this.calcularTotales(this.facturaRec.items);
             this.resetServicio();
-            $toast.sucs("Servicio Añadido");
+            $toast.sucs("Artículo añadido");
         },
         updateOrPush(servicio) {
             // let index = this.facturaRec.items.findIndex(
@@ -709,6 +734,13 @@ export default {
         },
 
         calcularTotales(lista_servicios) {
+            const importe_bruto = lista_servicios.reduce((acc, servicio) => {
+                const c = parseFloat(servicio.cantidad);
+                const p = parseFloat(servicio.precio);
+                const bruto = (Number.isNaN(c) ? 0 : c) * (Number.isNaN(p) ? 0 : p);
+                return acc + bruto;
+            }, 0);
+
             let sub_total = lista_servicios.reduce((acc, servicio) => {
                 let subtotal = servicio.cantidad * servicio.precio;
                 let dcto = (subtotal * servicio.dcto) / 100;
@@ -746,21 +778,28 @@ export default {
                 };
             });
 
-            let retencion_procentaje = this.retenciones.find(
+            const cuota = this.totales_ivas.reduce((acc, row) => acc + row.value, 0);
+
+            const retRow = this.retenciones?.find(
                 (element) => element.id == this.facturaRec.retencion_id
-            ).descripcion;
+            );
+            const retencion_procentaje = retRow?.descripcion;
             let retencion_valor = 0;
             if (typeof retencion_procentaje === "number") {
                 retencion_valor = (sub_total * retencion_procentaje) / 100;
             }
 
             let total = sub_total - retencion_valor;
-            this.subtotal = sub_total;
-            this.retencion = retencion_valor;
-            // Sumar el total general con los totales de IVA
-            this.total =
-                total +
-                this.totales_ivas.reduce((acc, iva) => acc + iva.value, 0);
+            const sumaIvas = this.totales_ivas.reduce(
+                (acc, iva) => acc + iva.value,
+                0
+            );
+            const totalFra = total + sumaIvas;
+            this.importeBruto = Math.round(importe_bruto * 100) / 100;
+            this.subtotal = Math.round(sub_total * 100) / 100;
+            this.cuotaIva = Math.round(cuota * 100) / 100;
+            this.retencion = Math.round(retencion_valor * 100) / 100;
+            this.total = Math.round(totalFra * 100) / 100;
         },
 
         getArrayIva() {
@@ -769,7 +808,7 @@ export default {
                     this.array_iva = res.data.success;
                 },
                 (err) => {
-                    $toast.error("Error consultando servicios");
+                    $toast.error("Error consultando artículos");
                 }
             );
         },
@@ -783,42 +822,26 @@ export default {
             formData.append("descripcion", this.facturaRec.descripcion);
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
             formData.append("retencion_id", this.facturaRec.retencion_id);
-            UploadFilesService.validateUploadedFile(this.modeloImagenesNews);
-            formData.append("imagen", this.modeloImagenesNews);
             formData.append("total", this.total);
             formData.append("nro_factura", this.facturaRec.nro_factura);
             formData.append("servicios", JSON.stringify(this.facturaRec.items));
-
-            if (this.modeloImagenesNews.length > 0) {
-                for (let fileSave of this.modeloImagenesNews) {
-                    formData.append("imagen[]", fileSave, fileSave.name);
-                }
-            }
 
             axios
                 .post(`api/duplicar-factura-recibida`, formData, {
                     headers: {
                         "Content-Type": "multipart/form-data",
                     },
-                    onUploadProgress: function (progressEvent) {
-                        this.uploadPercentage = parseInt(
-                            Math.round(
-                                (progressEvent.loaded / progressEvent.total) *
-                                    100
-                            )
-                        );
-                    }.bind(this),
                 })
                 .then(
                     (res) => {
                         // const response = res.data.success
-                        $toast.sucs("Factura duplicada con exito");
+                        $toast.sucs("Autofactura duplicada con exito");
                         this.$router.push("/lista-facturas-recibidas");
                         // this.$router.replace(`form-facturas-recibidas-update/${response.id}`)
                         // this.array_iva = res.data.success;
                     },
                     (err) => {
-                        $toast.error("Error consultando servicios");
+                        $toast.error("Error consultando artículos");
                     }
                 );
         },

@@ -137,7 +137,7 @@
     v-model="modalEliminar"
     color="primary"
     @cancel="closeModal"
-    @confirm="deleteProveedor"
+    @confirm="deleteArticulo"
   />
 </template>
 
@@ -247,7 +247,7 @@ export default {
             this.loadingServicios = false;
           },
           (err) => {
-            $toast.error("Error consultando servicios");
+            $toast.error("Error consultando artículos");
             this.servicios = [];
             this.totalServicios = 0;
             this.loadingServicios = false;
@@ -273,16 +273,16 @@ export default {
       this.modalEliminar = false;
       this.item = "";
     },
-    deleteProveedor() {
+    deleteArticulo() {
       this.modalEliminar = false;
       axios.get(`api/delete-servicio/${this.item.id}`).then(
         (res) => {
-          $toast.sucs("servicio eliminado");
+          $toast.sucs("Artículo eliminado");
           this.item = "";
           this.getServicios();
         },
         (err) => {
-          $toast.error("Error eliminando servicio");
+          $toast.error("Error eliminando artículo");
         }
       );
     },

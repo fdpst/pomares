@@ -39,7 +39,7 @@ export default
       return this.isGestor && !this.userIconOnly
     },
     showUserIcon() {
-      // Mostrar icono si no es solo selector
+      // Solo mostrar icono si no es solo selector
       return !this.selectorOnly
     }
   },

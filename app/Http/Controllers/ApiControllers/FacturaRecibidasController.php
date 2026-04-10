@@ -7,6 +7,7 @@ use App\Models\FacturaRecibidaItems;
 use App\Models\Retencion;
 use Illuminate\Http\Request;
 use App\Models\FacturaRecibida;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use App\Traits\Files\HandlerFiles;
 use App\Http\Requests\FacturaRecibidaRequest;
@@ -120,6 +121,40 @@ class FacturaRecibidasController extends Controller
         $fr = FacturaRecibida::with(['items'])->find($id);
 
         return response()->json(['success' => $fr], 200);
+    }
+
+    /**
+     * PDF individual de una autofactura (misma plantilla que el lote).
+     */
+    public function pdf(Request $request, $id)
+    {
+        $effectiveUserId = GestorHelper::getUserId($request, $request->query('user_id'));
+
+        if (!$effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+
+        $factura = FacturaRecibida::with(['items', 'proveedor.provincia'])
+            ->where('user_id', $effectiveUserId)
+            ->findOrFail($id);
+
+        $userLog = User::with('provincia')->find($effectiveUserId);
+        if (!$userLog) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        $pdf = PDF::loadView('pdf.factura_recibida_individual', [
+            'factura' => $factura,
+            'items' => $factura->items,
+            'userLog' => $userLog,
+            'tituloPdf' => 'FACTURA',
+        ])->setPaper('a4', 'portrait');
+
+        $nro = $factura->nro_factura
+            ? preg_replace('/[^a-zA-Z0-9_-]+/', '_', (string) $factura->nro_factura)
+            : 'sin_numero';
+
+        return $pdf->download('Factura_' . $nro . '_' . $factura->id . '.pdf');
     }
 
     /**

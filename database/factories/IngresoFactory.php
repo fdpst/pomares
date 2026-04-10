@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Ingreso;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
-use App\Models\Ingreso;
 
 class IngresoFactory extends Factory
 {
@@ -23,10 +23,11 @@ class IngresoFactory extends Factory
     public function definition()
     {
         return [
-          'codigo'      => Str::random(5),
-          'descripcion' => $this->faker->text(30),
-          'importe'     => $this->faker->randomFloat(2, 10, 250),
-          'created_at'  => $this->faker->dateTimeInInterval('-1 years', '+1 years', null)
+            'user_id' => Integer::random(1,2),
+            'codigo' => Str::random(5),
+            'descripcion' => $this->faker->text(30),
+            'importe' => $this->faker->randomFloat(2, 10, 250),
+            'created_at' => $this->faker->dateTimeInInterval('-1 years', '+1 years', null),
         ];
     }
 }

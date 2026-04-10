@@ -383,6 +383,10 @@
     "DOCUMENT_COLUMN_DOC_TYPES": true,
     "filterColumnsByType": true,
     "normalizeColumns": true,
-    "serializeColumns": true
+    "serializeColumns": true,
+    "format_precio_autofactura": true,
+    "itemPasaFiltroFecha": true,
+    "normalizarFechaItem": true,
+    "normalizarValorFiltroFecha": true
   }
 }

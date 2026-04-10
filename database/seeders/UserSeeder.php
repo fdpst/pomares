@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class UserSeeder extends Seeder
 {
@@ -15,12 +15,24 @@ class UserSeeder extends Seeder
 
     public function run()
     {
-       DB::table('users')->insert([
-         'provincia_id' => 1,
-         'name' => 'admin',
-         'email' => 'admin@admin.com',
-         'password' => bcrypt('admin'),
-         'role' => 1
-       ]);
+        User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            [
+                'provincia_id' => 1,
+                'name' => 'admin',
+                'password' => bcrypt('admin'),
+                'role' => 1,
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'empresa@empresa.com'],
+            [
+                'provincia_id' => 1,
+                'name' => 'Empresa demo',
+                'password' => bcrypt('empresa'),
+                'role' => 2,
+            ]
+        );
     }
 }

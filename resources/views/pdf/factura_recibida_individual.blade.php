@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Factura Recibida</title>
+    <title>{{ $tituloPdf ?? 'FACTURA' }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,81 +15,87 @@
 
         .header {
             width: 100%;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
-        .logo {
+        .info-emisor {
             float: left;
-            width: 30%;
+            width: 55%;
         }
 
-        .logo img {
-            height: 80px;
+        .info-emisor h1 {
+            font-size: 16px;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+            color: #333;
         }
 
-        .info-empresa {
+        .info-emisor p {
+            margin: 4px 0;
+            font-size: 11px;
+        }
+
+        .bloque-factura {
             float: right;
-            width: 65%;
+            width: 40%;
             text-align: right;
         }
 
-        .info-empresa h1 {
-            font-size: 18px;
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
+        .bloque-factura .titulo-doc {
+            font-size: 22px;
+            font-weight: bold;
+            color: #546e7a;
+            margin: 0 0 12px 0;
+            letter-spacing: 1px;
         }
 
-        .info-empresa p {
-            margin: 5px 0;
+        .bloque-factura table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 11px;
+        }
+
+        .bloque-factura td {
+            padding: 6px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .bloque-factura td:first-child {
+            font-weight: bold;
+            text-align: right;
+            padding-right: 12px;
+            width: 45%;
+        }
+
+        .bloque-factura td:last-child {
+            text-align: right;
         }
 
         .clear {
             clear: both;
         }
 
-        .titulo {
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            margin: 30px 0;
-            color: #546e7a;
-        }
-
-        .factura-info {
-            width: 100%;
-            margin-bottom: 30px;
-        }
-
-        .factura-info table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .factura-info td {
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .factura-info td:first-child {
-            font-weight: bold;
-            width: 150px;
-        }
-
-        .proveedor-info {
+        .cliente-info {
             background-color: #f5f5f5;
             padding: 15px;
             margin-bottom: 20px;
         }
 
-        .proveedor-info h3 {
+        .cliente-info h3 {
             margin: 0 0 10px 0;
-            font-size: 14px;
+            font-size: 13px;
             color: #546e7a;
+            text-transform: uppercase;
         }
 
-        .proveedor-info p {
+        .cliente-info p {
             margin: 5px 0;
+            font-size: 11px;
+        }
+
+        .factura-info {
+            width: 100%;
+            margin-bottom: 20px;
         }
 
         .items-table {
@@ -152,53 +158,64 @@
 </head>
 
 <body>
+    @php
+        $emisor = $factura->proveedor;
+    @endphp
+
     <div class="header">
-        <div class="logo">
-            <img src="{{ public_path() . '/logo.jpg' }}" alt="Logo">
+        <div class="info-emisor">
+            <h1>{{ optional($emisor)->nombre ?? 'Proveedor' }}</h1>
+            <p><strong>CIF/NIF:</strong> {{ optional($emisor)->cif ?? '—' }}</p>
+            @if(optional($emisor)->direccion)
+            <p>{{ $emisor->direccion }}</p>
+            @endif
+            @php
+                $locEmisor = $emisor
+                    ? trim(implode(' ', array_filter([
+                        $emisor->cp ?? null,
+                        $emisor->localidad ?? null,
+                        optional($emisor->provincia)->nombre ?? null,
+                    ])))
+                    : '';
+            @endphp
+            @if($locEmisor !== '')
+            <p>{{ $locEmisor }}</p>
+            @endif
         </div>
-        <div class="info-empresa">
-            <h1>{{ $userLog->nombre_fiscal ?? 'Empresa' }}</h1>
-            <p>{{ $userLog->direccion ?? '' }}</p>
-            <p>{{ $userLog->ciudad ?? '' }} {{ $userLog->provincia->nombre ?? '' }}</p>
-            <p>CIF/NIF: {{ $userLog->cif ?? '' }}</p>
-            <p>Tel: {{ $userLog->telefono ?? '' }} | Email: {{ $userLog->email_comercial ?? $userLog->email ?? '' }}</p>
+        <div class="bloque-factura">
+            <div class="titulo-doc">{{ $tituloPdf ?? 'FACTURA' }}</div>
+            <table>
+                <tr>
+                    <td>Número</td>
+                    <td>{{ $factura->nro_factura ?? '—' }}</td>
+                </tr>
+                <tr>
+                    <td>Fecha</td>
+                    <td>{{ \Carbon\Carbon::parse($factura->fecha)->format('d/m/Y') }}</td>
+                </tr>
+            </table>
         </div>
         <div class="clear"></div>
     </div>
 
-    <div class="titulo">FACTURA RECIBIDA</div>
-
-    <div class="factura-info">
-        <table>
-            <tr>
-                <td>Número de Factura:</td>
-                <td>{{ $factura->nro_factura ?? '-' }}</td>
-            </tr>
-            <tr>
-                <td>Fecha:</td>
-                <td>{{ \Carbon\Carbon::parse($factura->fecha)->format('d/m/Y') }}</td>
-            </tr>
-            <tr>
-                <td>Total:</td>
-                <td>{{ number_format($factura->total ?? 0, 2, ',', '.') }} €</td>
-            </tr>
-        </table>
-    </div>
-
-    <div class="proveedor-info">
-        <h3>DATOS DEL PROVEEDOR</h3>
-        <p><strong>Nombre:</strong> {{ $factura->proveedor->nombre ?? '-' }}</p>
-        <p><strong>CIF:</strong> {{ $factura->proveedor->cif ?? '-' }}</p>
-        @if($factura->proveedor->direccion ?? null)
-        <p><strong>Dirección:</strong> {{ $factura->proveedor->direccion }}</p>
+    <div class="cliente-info">
+        <h3>Cliente</h3>
+        <p><strong>{{ $userLog->nombre_fiscal ?? 'Empresa' }}</strong></p>
+        @if(filled($userLog->direccion ?? null))
+        <p><strong>Dirección:</strong> {{ $userLog->direccion }}</p>
         @endif
+        @php
+            $locCliente = trim(implode(' ', array_filter([
+                $userLog->postal_code ?? null,
+                $userLog->ciudad ?? null,
+                optional($userLog->provincia)->nombre ?? null,
+            ])));
+        @endphp
+        @if($locCliente !== '')
+        <p>{{ $locCliente }}</p>
+        @endif
+        <p><strong>CIF/NIF:</strong> {{ $userLog->cif ?? '—' }}</p>
     </div>
-
-    @if($factura->descripcion)
-    <div class="descripcion">
-        <strong>Descripción:</strong> {{ $factura->descripcion }}
-    </div>
-    @endif
 
     @if($items && count($items) > 0)
     <table class="items-table">
@@ -227,12 +244,18 @@
 
     <div class="totales">
         <table>
-            <tr>
-                <td>Total:</td>
+            <tr class="total-row">
+                <td>Total factura</td>
                 <td>{{ number_format($factura->total ?? 0, 2, ',', '.') }} €</td>
             </tr>
         </table>
     </div>
+
+    @if($factura->descripcion)
+    <div class="descripcion">
+        <strong>Observaciones:</strong> {{ $factura->descripcion }}
+    </div>
+    @endif
 </body>
 
 </html>

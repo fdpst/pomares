@@ -1,5 +1,5 @@
 <template>
-	<VCard class="pb-10" title="Lista de proveedores">
+	<VCard class="pb-10" title="Lista de distribuidores">
 		<div class="ps-5 pe-5 pb-5">
 			<ConfirmDialog
 				v-model="modalEliminar"
@@ -90,32 +90,42 @@
 			}
 		},
 		created() {
-			console.log('ListaProveedores: created() ejecutado');
 			this.getProveedores()
-		},
-		
-		mounted() {
-			console.log('ListaProveedores: mounted() ejecutado');
-			console.log('ListaProveedores: onClienteChanged disponible?', typeof this.onClienteChanged === 'function');
 		},
 		methods: {
 			getProveedores() {
-				// No pasar el user_id en la URL, el backend lo determinará automáticamente
 				this.loadingProveedores = true;
-				axios.get(`api/get-proveedores`).then(res => {
-					this.proveedores = res.data;
-					this.loadingProveedores = false;
-				}, err => {
-					$toast.error('Error consultando proveedores');
-					this.loadingProveedores = false;
-				})
+				axios
+					.get(`api/get-proveedores`)
+					.then((res) => {
+						this.proveedores = res.data;
+					})
+					.catch((err) => {
+						const st = err.response?.status;
+						const msg = err.response?.data?.error;
+						if (st === 401) {
+							$toast.error('Sesión no válida. Vuelva a iniciar sesión.');
+						} else if (st === 403) {
+							$toast.error(
+								msg ||
+									'Sin permiso: si es gestor, seleccione una empresa en el menú superior.'
+							);
+						} else if (!err.response) {
+							$toast.error(
+								'Sin conexión con el servidor. Compruebe la red e inténtelo de nuevo.'
+							);
+						} else {
+							$toast.error('Error consultando distribuidores');
+						}
+					})
+					.finally(() => {
+						this.loadingProveedores = false;
+					});
 			},
 			
 			// Método llamado cuando cambia el cliente seleccionado
 			onClienteChanged(event) {
 				console.log('Cliente cambiado, recargando proveedores...', event.detail);
-				// Limpiar la lista mientras se cargan los nuevos datos
-				this.proveedores = [];
 				this.getProveedores();
 			},
 			mostrarModalEliminar(item){
@@ -130,10 +140,10 @@
 				 this.modalEliminar = false;
 				axios.get(`api/delete-proveedor/${this.item.id}`).then(res => {
 					this.proveedores.splice(this.proveedores.indexOf(this.item), 1)
-					$toast.sucs('Proveedor eliminado')
+					$toast.sucs('Distribuidor eliminado')
 					this.item= '';
 				}, err => {
-					$toast.error('Error eliminando proveedor')
+					$toast.error('Error eliminando distribuidor')
 				})
 			}
 		},
