@@ -23,6 +23,6 @@ class ReciboEmail extends Mailable
   public function build(){
       return $this->markdown('emails.recibo.recibo')
         ->attachFromStorageDisk('recibos', $this->archivo, $this->label)
-        ->subject('Martí Pomares, S.L | ' . $this->label);
+        ->subject('Fidias Gold | ' . $this->label);
   }
 }

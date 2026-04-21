@@ -23,7 +23,7 @@
                         color="secondary"
                         class="mt-1"
                         :disabled="selected.length === 0"
-                        title="Misma distribuidor y líneas con comisión"
+                        title="Mismo punto de venta y líneas con comisión"
                         @click="abrirModalFacturaComisiones">
                         Factura por comisiones
                     </VBtn>
@@ -154,7 +154,7 @@
     <ConfirmDialog
         v-model="modalFacturaComisiones"
         color="primary"
-        text="Se creará una factura recibida por cada liquidación seleccionada (mismo distribuidor), con el importe de la comisión y el mismo número de documento que la liquidación. Las que no tengan comisión calculable se omitirán. ¿Continuar?"
+        text="Se creará una factura recibida por cada liquidación seleccionada (mismo punto de venta), con el importe de la comisión y el mismo número de documento que la liquidación. Las que no tengan comisión calculable se omitirán. ¿Continuar?"
         @cancel="modalFacturaComisiones = false"
         @confirm="confirmarFacturaComisiones" />
 </template>
@@ -187,7 +187,7 @@ export default {
                     value: "fecha",
                 },
                 {
-                    title: "Distribuidor",
+                    title: "Punto de venta",
                     value: "proveedor.nombre",
                 },
                 {
@@ -248,7 +248,7 @@ export default {
             ];
             if (provs.length > 1) {
                 return $toast.error(
-                    "Todas las liquidaciones deben ser del mismo distribuidor"
+                    "Todas las liquidaciones deben ser del mismo punto de venta"
                 );
             }
             this.modalFacturaComisiones = true;

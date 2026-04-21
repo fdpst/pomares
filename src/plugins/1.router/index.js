@@ -71,6 +71,7 @@ const router = createRouter({
 /** Rutas desactivadas en UI para todos los roles (menú + acceso directo). */
 const DISABLED_ROUTE_NAMES = new Set([
     "lista-clientes",
+    "lista-clientes-admin",
     "guardar-cliente",
     "lista-albaranes-enviados",
     "form-albaranes-enviados",
@@ -101,8 +102,62 @@ const DISABLED_ROUTE_NAMES = new Set([
     "guardar-servicio",
 ]);
 
+/** Misma política por `path` (URL directa, enlaces viejos, rutas sin nombre). */
+const DISABLED_PATHS_EXACT = new Set([
+    "/lista-clientes",
+    "/lista-clientes-admin",
+    "/guardar-cliente",
+    "/lista-albaranes-enviados",
+    "/form-albaranes-enviados",
+    "/lista-albaranes-recibidos",
+    "/form-albaranes-recibidos",
+    "/guardar-recibo",
+    "/lista-recibos",
+    "/lista-facturas",
+    "/lista-facturas-rectificativas",
+    "/lista-facturas-proforma",
+    "/lista-notas",
+    "/enviar-facturas",
+    "/contabilidad",
+    "/exportar-informe",
+    "/lista-ingresos",
+    "/guardar-ingreso",
+    "/lista-gastos",
+    "/guardar-gasto",
+    "/tipos-gasto",
+    "/lista-libro-diario",
+    "/guardar-libro-diario",
+    "/reporte-iva",
+    "/morosos",
+    "/lista-servicios",
+    "/guardar-servicio",
+]);
+
+const DISABLED_PATH_PREFIXES = [
+    "/form-albaranes-enviados-update",
+    "/form-albaranes-recibidos-update",
+    "/update-gasto",
+];
+
+function isNavigationToDisabledRoute(to) {
+    const pathOnly = to.path.split("?")[0];
+    if (DISABLED_PATHS_EXACT.has(pathOnly)) return true;
+    if (
+        DISABLED_PATH_PREFIXES.some(
+            (prefix) =>
+                pathOnly === prefix || pathOnly.startsWith(`${prefix}/`),
+        )
+    ) {
+        return true;
+    }
+    return to.matched.some(
+        (record) =>
+            record.name && DISABLED_ROUTE_NAMES.has(String(record.name)),
+    );
+}
+
 router.beforeEach((to) => {
-    if (to.name && DISABLED_ROUTE_NAMES.has(String(to.name))) {
+    if (isNavigationToDisabledRoute(to)) {
         return { name: "error" };
     }
 

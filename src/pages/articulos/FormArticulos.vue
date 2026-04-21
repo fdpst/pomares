@@ -1,5 +1,5 @@
 <template>
-  <VDialog v-model="dialog" max-width="700px">
+  <VDialog v-model="dialog" max-width="960px" scrollable>
     <DialogCloseBtn @click="close" />
     <DatosArticulo
       :titulo="`${id != null ? 'Editar' : 'Nuevo'} ${titulo}`"

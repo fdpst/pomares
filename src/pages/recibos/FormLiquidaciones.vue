@@ -38,7 +38,7 @@
                             :items="proveedores"
                             item-title="nombre"
                             item-value="id"
-                            label="Distribuidor"
+                            label="Punto de venta"
                             :rules="[requiredValidator]"></VSelect>
                     </VCol>
 
@@ -219,7 +219,7 @@
                         cols="12"
                         lg="5">
                         <p class="text-caption text-medium-emphasis mb-1">
-                            Comisiones del distribuidor
+                            Comisiones del punto de venta
                         </p>
                         <VCard
                             v-if="deduccionesComisionLines.length"
@@ -655,7 +655,7 @@ export default {
                     this.proveedores = res.data;
                 },
                 (res) => {
-                    $toast.error("Error consultando distribuidores");
+                    $toast.error("Error consultando puntos de venta");
                 }
             );
         },

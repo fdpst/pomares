@@ -1,0 +1,1 @@
+import{K as a,f as t,e,a4 as o,o as c,b as r,t as n,ae as s}from"./main-CgFNWkj0.js";const i={name:"Inicio"};function l(d,p,_,f,x,u){return c(),t(o,{title:"Inicio"},{default:e(()=>[r(s,{class:"text-body-1"},{default:e(()=>[n(" Bienvenido. Utilice el menú lateral para navegar por la aplicación. ")]),_:1})]),_:1})}const V=a(i,[["render",l]]);export{V as default};

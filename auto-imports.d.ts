@@ -487,8 +487,6 @@ declare module 'vue' {
     readonly mapWritableState: UnwrapRef<typeof import('pinia')['mapWritableState']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
-    readonly normalizarFechaItem: UnwrapRef<typeof import('./src/utils/filtroFechaLista.js')['normalizarFechaItem']>
-    readonly normalizarValorFiltroFecha: UnwrapRef<typeof import('./src/utils/filtroFechaLista.js')['normalizarValorFiltroFecha']>
     readonly normalizeColumns: UnwrapRef<typeof import('./src/utils/documentColumns.js')['normalizeColumns']>
     readonly numberValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['numberValidator']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>

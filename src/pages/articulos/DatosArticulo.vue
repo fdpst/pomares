@@ -6,27 +6,31 @@
       <VForm ref="form" v-model="formValid" class="mt-5">
         <loader v-if="isloading"></loader>
 
-        <VRow dense>
-          <VCol cols="12" md="2" v-if="!hide">
+        <VRow dense class="articulo-form-row align-end">
+          <VCol cols="4" sm="3" md="2" v-if="!hide">
             <VTextField
               filled
+              density="compact"
               v-model="servicios.nro"
               label="Nro"
             ></VTextField>
           </VCol>
 
-        <VCol cols="12" :md="hide ? 12 : 4" sm="12">
+          <VCol cols="12" :md="hide ? 12 : 5" sm="12">
             <VTextField
               filled
+              density="compact"
               v-model="servicios.descripcion"
               label="Nombre"
               :rules="[requiredValidator]"
             ></VTextField>
           </VCol>
 
-        <VCol cols="12" md="4" v-if="!hide">
+          <VCol cols="6" sm="4" md="2" v-if="!hide">
             <VTextField
               filled
+              density="compact"
+              class="articulo-field-precio"
               v-model="servicios.precio"
               label="Precio"
               @input="servicios.precio = inputPrice($event)"
@@ -36,18 +40,20 @@
             </VTextField>
           </VCol>
 
-        <VCol cols="12" md="4" v-if="!hide">
-          <VSelect
-            v-model="servicios.iva_percent"
-            :items="array_iva"
-            item-value="descripcion"
-            item-title="descripcion"
-            filled
-            label="IVA (%)"
-            :rules="[requiredValidator]"
-          >
-          </VSelect>
-        </VCol>
+          <VCol cols="6" sm="5" md="3" v-if="!hide">
+            <VSelect
+              v-model="servicios.iva_percent"
+              :items="array_iva"
+              item-value="descripcion"
+              item-title="descripcion"
+              filled
+              density="compact"
+              class="articulo-field-iva"
+              label="IVA (%)"
+              :rules="[requiredValidator]"
+            >
+            </VSelect>
+          </VCol>
 
           <!-- <VCol cols="12" :md="hide ? 12 : 4" sm="12">
             <CuentaContableEditor
@@ -216,3 +222,11 @@ export default {
 
 };
 </script>
+
+<style scoped>
+/* Campos numéricos más estrechos para que Nro + Nombre + Precio + IVA quepan en una fila (md+). */
+.articulo-field-precio :deep(.v-field),
+.articulo-field-iva :deep(.v-field) {
+  font-size: 0.9375rem;
+}
+</style>

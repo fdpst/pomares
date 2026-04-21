@@ -47,6 +47,15 @@ class ServicioController extends Controller
       });
     }
 
+    if ($request->filled('fecha_desde')) {
+      $fd = substr((string) $request->input('fecha_desde'), 0, 10);
+      $query->whereDate('created_at', '>=', $fd);
+    }
+    if ($request->filled('fecha_hasta')) {
+      $fh = substr((string) $request->input('fecha_hasta'), 0, 10);
+      $query->whereDate('created_at', '<=', $fh);
+    }
+
     $amount = $request->input('amount');
     if ($request->has('amount') && (int) $amount !== -1) {
       $itemsPerPage = (int) $amount ?: 15;

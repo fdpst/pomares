@@ -1,5 +1,5 @@
 <template>
-  <VCard :title="$route.query.id ? 'Editar distribuidor' : 'Crear distribuidor'">
+  <VCard :title="$route.query.id ? 'Editar punto de venta' : 'Crear punto de venta'">
     <VDivider></VDivider>
 
     <loader v-if="isloading"></loader>
@@ -10,7 +10,7 @@
           <VCol cols="12" md="2">
             <VTextField
               filled
-              label="N°. Distribuidor"
+              label="N°. Punto de venta"
               v-model="proveedor.nro_proveedor"
             ></VTextField>
           </VCol>
@@ -138,6 +138,57 @@
             </VTextField>
           </VCol>
         </VRow>
+
+        <VRow dense class="mt-2">
+          <VCol cols="12" md="6">
+            <VTextField
+              filled
+              v-model="proveedor.nombre_comercial"
+              label="Nombre comercial"
+              hide-details="auto"
+            />
+          </VCol>
+          <VCol cols="12" md="6">
+            <VTextField
+              filled
+              v-model="proveedor.persona_contacto"
+              label="Persona de contacto (opcional)"
+              hide-details="auto"
+            />
+          </VCol>
+          <VCol cols="12" md="6">
+            <VSelect
+              filled
+              v-model="proveedor.catalogo_forma_pago_id"
+              :items="catalogoFormasPago"
+              item-title="descripcion"
+              item-value="id"
+              label="Forma de pago"
+              clearable
+              hide-details="auto"
+            />
+          </VCol>
+          <VCol cols="12" md="6" class="d-flex align-end pb-1">
+            <VBtn
+              block
+              rounded="pill"
+              variant="flat"
+              color="primary"
+              prepend-icon="ri-bank-card-line"
+              class="font-weight-medium"
+              @click="abrirDialogCatalogoFormasPago">
+              Gestionar formas de pago
+            </VBtn>
+          </VCol>
+          <VCol cols="12" md="8">
+            <VTextField
+              filled
+              v-model="proveedor.numero_cuenta"
+              label="Número de cuenta (IBAN / cuenta bancaria)"
+              hide-details="auto"
+            />
+          </VCol>
+        </VRow>
       </VForm>
     </VCardText>
 
@@ -146,7 +197,7 @@
       <VCardText class="pt-6">
         <p class="text-h6 mb-4">Comisiones por producto</p>
         <p class="text-body-2 text-medium-emphasis mb-4">
-          Un mismo producto solo puede tener una comisión por distribuidor. Tipo
+          Un mismo producto solo puede tener una comisión por punto de venta. Tipo
           <strong>%</strong> o importe fijo en <strong>€</strong>.
         </p>
         <VBtn
@@ -195,7 +246,7 @@
     </template>
     <VCardText v-else class="pt-4">
       <VAlert type="info" variant="tonal" density="comfortable">
-        Guarde el distribuidor para poder añadir comisiones por producto.
+        Guarde el punto de venta para poder añadir comisiones por producto.
       </VAlert>
     </VCardText>
 
@@ -278,6 +329,90 @@
       @confirm="eliminarComisionConfirmada"
       color="primary"
     />
+
+    <VDialog v-model="dialogCatalogoFormasPago" max-width="580" scrollable>
+      <VCard title="Formas de pago">
+        <VDivider />
+        <VCardText class="pt-4">
+          <VRow dense class="align-end mb-4">
+            <VCol cols="12" md="8">
+              <VTextField
+                v-model="nuevaFormaDescripcion"
+                filled
+                label="Nueva forma de pago"
+                density="comfortable"
+                hide-details
+                @keyup.enter="guardarNuevaForma"
+              />
+            </VCol>
+            <VCol cols="12" md="4">
+              <VBtn block color="primary" @click="guardarNuevaForma">
+                Añadir
+              </VBtn>
+            </VCol>
+          </VRow>
+          <VDataTable
+            :headers="catalogoFormaHeaders"
+            :items="catalogoFormasPago"
+            item-value="id"
+            density="compact"
+            class="elevation-0 border rounded">
+            <template #item.acciones="{ item }">
+              <VIcon
+                small
+                class="mr-2"
+                color="grey-700"
+                @click="abrirEditarForma(item)">
+                ri-pencil-line
+              </VIcon>
+              <VIcon
+                small
+                color="red"
+                @click="confirmarEliminarForma(item)">
+                ri-delete-bin-line
+              </VIcon>
+            </template>
+          </VDataTable>
+        </VCardText>
+        <VCardActions class="pb-4">
+          <VSpacer />
+          <VBtn variant="text" @click="dialogCatalogoFormasPago = false">
+            Cerrar
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="dialogEditarForma" max-width="440">
+      <VCard title="Editar forma de pago">
+        <VCardText>
+          <VTextField
+            v-model="formaEditDescripcion"
+            filled
+            label="Descripción"
+            class="mt-2"
+            hide-details="auto"
+            @keyup.enter="guardarFormaEditada"
+          />
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="dialogEditarForma = false">
+            Cancelar
+          </VBtn>
+          <VBtn color="primary" @click="guardarFormaEditada">Guardar</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <ConfirmDialog
+      v-model="modalEliminarForma"
+      title="Eliminar forma de pago"
+      text="Los puntos de venta que la usaban quedarán sin forma de pago asignada. ¿Continuar?"
+      @cancel="modalEliminarForma = false"
+      @confirm="eliminarFormaConfirmada"
+      color="primary"
+    />
   </VCard>
 </template>
 
@@ -294,6 +429,10 @@ export default {
       proveedor: {
         id: "",
         nombre: "",
+        nombre_comercial: "",
+        catalogo_forma_pago_id: null,
+        numero_cuenta: "",
+        persona_contacto: "",
         email: "",
         telefono: "",
         cif: "",
@@ -305,6 +444,18 @@ export default {
         user_id: localStorage.getItem("user_id"),
         nro_proveedor: null,
       },
+      catalogoFormasPago: [],
+      dialogCatalogoFormasPago: false,
+      nuevaFormaDescripcion: "",
+      dialogEditarForma: false,
+      formaEditId: null,
+      formaEditDescripcion: "",
+      modalEliminarForma: false,
+      formaPendienteBorrar: null,
+      catalogoFormaHeaders: [
+        { title: "Descripción", value: "descripcion", sortable: false },
+        { title: "Acciones", value: "acciones", sortable: false, width: 120 },
+      ],
       rules: {
         number_rule: (value) => /^\d+$/.test(value) || "Campo numérico",
       },
@@ -347,14 +498,104 @@ export default {
     this.getProvincias();
     this.getCuentas();
     this.cargarArticulosCompra();
+    this.cargarCatalogoFormasPago();
   },
 
   methods: {
+    abrirDialogCatalogoFormasPago() {
+      this.dialogCatalogoFormasPago = true;
+      this.cargarCatalogoFormasPago();
+    },
+    cargarCatalogoFormasPago() {
+      axios.get("api/catalogo-formas-pago").then(
+        (res) => {
+          this.catalogoFormasPago = res.data || [];
+        },
+        () => {
+          this.catalogoFormasPago = [];
+          $toast.error("Error cargando formas de pago");
+        }
+      );
+    },
+    guardarNuevaForma() {
+      const d = (this.nuevaFormaDescripcion || "").trim();
+      if (!d) {
+        return $toast.error("Indique una descripción");
+      }
+      axios
+        .post("api/catalogo-formas-pago", {
+          descripcion: d,
+          user_id: this.effectiveUserId,
+        })
+        .then(() => {
+          this.nuevaFormaDescripcion = "";
+          this.cargarCatalogoFormasPago();
+          $toast.sucs("Forma de pago añadida");
+        })
+        .catch((err) => {
+          const msg =
+            err.response?.data?.errors?.descripcion?.[0] ||
+            err.response?.data?.message ||
+            "No se pudo guardar";
+          $toast.error(msg);
+        });
+    },
+    abrirEditarForma(item) {
+      this.formaEditId = item.id;
+      this.formaEditDescripcion = item.descripcion || "";
+      this.dialogEditarForma = true;
+    },
+    guardarFormaEditada() {
+      const d = (this.formaEditDescripcion || "").trim();
+      if (!d || !this.formaEditId) {
+        return $toast.error("Indique una descripción");
+      }
+      axios
+        .put(`api/catalogo-formas-pago/${this.formaEditId}`, {
+          descripcion: d,
+          user_id: this.effectiveUserId,
+        })
+        .then(() => {
+          this.dialogEditarForma = false;
+          this.cargarCatalogoFormasPago();
+          $toast.sucs("Forma de pago actualizada");
+        })
+        .catch((err) => {
+          const msg =
+            err.response?.data?.errors?.descripcion?.[0] ||
+            err.response?.data?.message ||
+            "No se pudo actualizar";
+          $toast.error(msg);
+        });
+    },
+    confirmarEliminarForma(item) {
+      this.formaPendienteBorrar = item;
+      this.modalEliminarForma = true;
+    },
+    eliminarFormaConfirmada() {
+      this.modalEliminarForma = false;
+      if (!this.formaPendienteBorrar) return;
+      const id = this.formaPendienteBorrar.id;
+      axios
+        .delete(`api/catalogo-formas-pago/${id}`)
+        .then(() => {
+          if (this.proveedor.catalogo_forma_pago_id === id) {
+            this.proveedor.catalogo_forma_pago_id = null;
+          }
+          this.cargarCatalogoFormasPago();
+          $toast.sucs("Forma de pago eliminada");
+        })
+        .catch(() => {
+          $toast.error("Error al eliminar");
+        });
+      this.formaPendienteBorrar = null;
+    },
     onClienteChanged() {
       this.proveedor.user_id = this.effectiveUserId;
       this.getProvincias();
       this.getCuentas();
       this.cargarArticulosCompra();
+      this.cargarCatalogoFormasPago();
       if (this.$route.query.id) {
         this.getProveedorById(this.$route.query.id);
       }
@@ -386,7 +627,7 @@ export default {
     },
     abrirDialogComision(row) {
       if (!this.proveedor.id) {
-        return $toast.error("Guarde el distribuidor antes de añadir comisiones");
+        return $toast.error("Guarde el punto de venta antes de añadir comisiones");
       }
       if (row) {
         this.comisionEditId = row.id;
@@ -482,7 +723,7 @@ export default {
           this.loadComisiones();
         },
         () => {
-          $toast.error("Error consultando distribuidor");
+          $toast.error("Error consultando punto de venta");
         }
       );
     },
@@ -490,7 +731,7 @@ export default {
       this.proveedor.user_id = this.effectiveUserId;
       axios.post("api/save-proveedor", this.proveedor).then(
         (res) => {
-          $toast.sucs("Distribuidor guardado con exito");
+          $toast.sucs("Punto de venta guardado con éxito");
           const data = res.data;
           const id = data?.id;
           if (id) {
@@ -505,7 +746,7 @@ export default {
           }
         },
         () => {
-          $toast.error("Error guardando distribuidor");
+          $toast.error("Error guardando punto de venta");
         }
       );
     },

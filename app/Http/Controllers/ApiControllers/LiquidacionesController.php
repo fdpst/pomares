@@ -281,7 +281,7 @@ class LiquidacionesController extends Controller
     }
 
     /**
-     * Crea una factura recibida por cada liquidación seleccionada (mismo distribuidor).
+     * Crea una factura recibida por cada liquidación seleccionada (mismo punto de venta).
      * Cada factura tiene una sola línea (comisión de esa liquidación).
      * El nro_factura de cada factura coincide con el almacenado en la liquidación (misma nomenclatura).
      */
@@ -318,7 +318,7 @@ class LiquidacionesController extends Controller
         $proveedorIds = $liquidaciones->pluck('proveedor_id')->unique()->filter();
         if ($proveedorIds->count() !== 1) {
             return response()->json([
-                'error' => 'Todas las liquidaciones seleccionadas deben ser del mismo distribuidor.',
+                'error' => 'Todas las liquidaciones seleccionadas deben ser del mismo punto de venta.',
             ], 422);
         }
 
@@ -372,7 +372,7 @@ class LiquidacionesController extends Controller
                 DB::rollBack();
 
                 return response()->json([
-                    'error' => 'Ninguna de las liquidaciones seleccionadas tiene comisión calculable (productos con comisión en el distribuidor).',
+                    'error' => 'Ninguna de las liquidaciones seleccionadas tiene comisión calculable (productos con comisión en el punto de venta).',
                     'omitidas' => $omitidas,
                 ], 422);
             }

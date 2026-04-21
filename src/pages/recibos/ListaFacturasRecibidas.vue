@@ -175,7 +175,7 @@ export default {
                     value: "fecha",
                 },
                 {
-                    title: "Distribuidor",
+                    title: "Punto de venta",
                     value: "proveedor.nombre",
                 },
                 {
@@ -232,7 +232,10 @@ export default {
         verPdfAutofactura(item) {
             axios
                 .get(`api/facturas-recibidas-pdf/${item.id}`, {
-                    params: { user_id: this.effectiveUserId },
+                    params: {
+                        user_id: this.effectiveUserId,
+                        _t: Date.now(),
+                    },
                     responseType: "blob",
                 })
                 .then((response) => {

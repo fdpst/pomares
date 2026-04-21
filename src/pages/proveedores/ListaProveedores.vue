@@ -1,5 +1,5 @@
 <template>
-	<VCard class="pb-10" title="Lista de distribuidores">
+	<VCard class="pb-10" title="Lista de puntos de venta">
 		<div class="ps-5 pe-5 pb-5">
 			<ConfirmDialog
 				v-model="modalEliminar"
@@ -70,6 +70,10 @@
 						value: 'nombre'
 					},
 					{
+						title: 'Nombre comercial',
+						value: 'nombre_comercial'
+					},
+					{
 						title: 'Email',
 						value: 'email'
 					},
@@ -115,7 +119,7 @@
 								'Sin conexión con el servidor. Compruebe la red e inténtelo de nuevo.'
 							);
 						} else {
-							$toast.error('Error consultando distribuidores');
+							$toast.error('Error consultando puntos de venta');
 						}
 					})
 					.finally(() => {
@@ -125,7 +129,7 @@
 			
 			// Método llamado cuando cambia el cliente seleccionado
 			onClienteChanged(event) {
-				console.log('Cliente cambiado, recargando proveedores...', event.detail);
+				console.log('Cliente cambiado, recargando puntos de venta...', event.detail);
 				this.getProveedores();
 			},
 			mostrarModalEliminar(item){
@@ -140,10 +144,10 @@
 				 this.modalEliminar = false;
 				axios.get(`api/delete-proveedor/${this.item.id}`).then(res => {
 					this.proveedores.splice(this.proveedores.indexOf(this.item), 1)
-					$toast.sucs('Distribuidor eliminado')
+					$toast.sucs('Punto de venta eliminado')
 					this.item= '';
 				}, err => {
-					$toast.error('Error eliminando distribuidor')
+					$toast.error('Error eliminando punto de venta')
 				})
 			}
 		},

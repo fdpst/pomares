@@ -11,6 +11,10 @@ import { useAbility } from '@casl/vue'
  * @param {string} subject CASL Subject // https://casl.js.org/v4/en/guide/intro#basics
  */
 export const can = (action, subject) => {
+  // Menú sin action/subject: no aplicar CASL (evita ocultar ítems con $can(undefined, undefined) === false).
+  if (action == null && subject == null)
+    return true
+
   const vm = getCurrentInstance()
   if (!vm)
     return false

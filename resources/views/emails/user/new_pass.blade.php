@@ -1,13 +1,13 @@
 @component('mail::message')
 
-<img src="{{URL::asset('logo_menu.png')}}" alt="Martí Pomares, S.L" height="200">
+<img src="{{URL::asset('logo_menu.png')}}" alt="Fidias Gold" height="200">
 
 <br>
 <br>
 <br>
 
 Se ha registrado una nueva contraseña, asociada a
-su usuario en Martí Pomares, S.L con el correo electrónico {{ $user->email }}
+su USUARIO de fidifactu con el correo electrónico {{ $user->email }}
 
 Credenciales:
 

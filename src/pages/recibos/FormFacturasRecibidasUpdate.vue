@@ -35,7 +35,7 @@
                             :items="proveedores"
                             item-title="nombre"
                             item-value="id"
-                            label="Distribuidor"></VSelect>
+                            label="Punto de venta"></VSelect>
                     </VCol>
 
                     <VCol
@@ -331,16 +331,20 @@
 
                     <VBtn
                         rounded="pill"
-                        variant="outlined"
+                        variant="tonal"
+                        color="info"
+                        prepend-icon="ri-file-copy-line"
+                        class="mr-1"
                         @click="duplicarDialog = true"
-                        :disabled="isloading"
-                        >Duplicar</VBtn
-                    >
+                        :disabled="isloading">
+                        Duplicar
+                    </VBtn>
 
                     <VBtn
                         rounded="pill"
-                        variant="outlined"
-                        color="primary"
+                        variant="flat"
+                        color="error"
+                        prepend-icon="ri-file-pdf-line"
                         class="ml-1"
                         :disabled="isloading || !facturaRec.id"
                         @click="verPdfAutofactura">
@@ -554,7 +558,7 @@ export default {
                     this.calcularTotales(this.facturaRec.items);
                 },
                 (res) => {
-                    $toast.error("Error consultando distribuidores");
+                    $toast.error("Error consultando puntos de venta");
                 }
             );
         },
@@ -565,7 +569,7 @@ export default {
                     this.proveedores = res.data;
                 },
                 (res) => {
-                    $toast.error("Error consultando distribuidores");
+                    $toast.error("Error consultando puntos de venta");
                 }
             );
         },
@@ -584,7 +588,10 @@ export default {
             }
             axios
                 .get(`api/facturas-recibidas-pdf/${this.facturaRec.id}`, {
-                    params: { user_id: this.effectiveUserId },
+                    params: {
+                        user_id: this.effectiveUserId,
+                        _t: Date.now(),
+                    },
                     responseType: "blob",
                 })
                 .then((response) => {

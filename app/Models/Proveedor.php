@@ -15,6 +15,10 @@ class Proveedor extends Model
     protected $fillable = [
       'nro_proveedor',
       'nombre',
+      'nombre_comercial',
+      'catalogo_forma_pago_id',
+      'numero_cuenta',
+      'persona_contacto',
       'email',
       'telefono',
       'user_id',
@@ -43,6 +47,11 @@ class Proveedor extends Model
     public function provincia()
     {
         return $this->belongsTo(Provincia::class, 'id_provincia');
+    }
+
+    public function catalogoFormaPago()
+    {
+        return $this->belongsTo(CatalogoFormaPago::class, 'catalogo_forma_pago_id');
     }
 
     public function comisiones()

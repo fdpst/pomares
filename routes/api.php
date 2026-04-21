@@ -88,6 +88,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::post('save-proveedor', 'ProveedorController@saveProveedor');
   Route::get('delete-proveedor/{proveedor_id}', 'ProveedorController@deleteProveedor');
   Route::get('get-last-proveedor-id', 'ProveedorController@getLastId');
+  Route::get('catalogo-formas-pago', 'CatalogoFormaPagoController@index');
+  Route::post('catalogo-formas-pago', 'CatalogoFormaPagoController@store');
+  Route::put('catalogo-formas-pago/{id}', 'CatalogoFormaPagoController@update');
+  Route::delete('catalogo-formas-pago/{id}', 'CatalogoFormaPagoController@destroy');
   Route::get('proveedor-comisiones/{proveedor_id}', 'ProveedorComisionController@index');
   Route::post('proveedor-comisiones', 'ProveedorComisionController@store');
   Route::post('proveedor-comisiones-update/{id}', 'ProveedorComisionController@update');

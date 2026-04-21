@@ -14,14 +14,19 @@ export const getComputedNavLinkToProp = computed(() => link => {
     rel: link.rel,
   }
 
-
-  // If route is string => it assumes string is route name => Create route object from route name
-  // If route is not string => It assumes it's route object => returns passed route object
-  if (link.to)
-    props.to = typeof link.to === 'string' ? { name: link.to } : link.to
-  else
+  // String que empiece por `/` = ruta absoluta (más fiable que el nombre tras layouts).
+  // Otro string = nombre de ruta (`{ name }`).
+  // Objeto = `to` de vue-router tal cual.
+  if (link.to) {
+    if (typeof link.to === 'string') {
+      props.to = link.to.startsWith('/') ? link.to : { name: link.to }
+    } else {
+      props.to = link.to
+    }
+  } else {
     props.href = link.href
-  
+  }
+
   return props
 })
 
@@ -34,9 +39,16 @@ export const getComputedNavLinkToProp = computed(() => link => {
 export const resolveNavLinkRouteName = (link, router) => {
   if (!link.to)
     return null
-  if (typeof link.to === 'string')
+  if (typeof link.to === 'string') {
+    if (link.to.startsWith('/')) {
+      const resolved = router.resolve(link.to)
+
+      return resolved.name ?? null
+    }
+
     return link.to
-  
+  }
+
   return router.resolve(link.to).name
 }
 

@@ -1,47 +1,92 @@
 /**
- * Filtro por rango de fechas opcional (desde / hasta) para listas.
- * Cualquiera de los dos puede ir solo; si ambos faltan, no se filtra.
+ * Convierte un valor de fecha a entero YYYYMMDD (solo calendario, sin hora).
+ * Acepta ISO `YYYY-MM-DD`, `YYYY-MM-DDTHH:mm:ss`, objetos Date o cadenas parseables.
+ *
+ * @param {string|Date|null|undefined} val
+ * @returns {number|null}
  */
-
-export function normalizarFechaItem(fecha) {
-    if (fecha == null || fecha === "") {
-        return null;
+function aYYYYMMDD(val) {
+  if (val == null || val === "") {
+    return null;
+  }
+  if (val instanceof Date) {
+    if (Number.isNaN(val.getTime())) {
+      return null;
     }
-    return String(fecha).substring(0, 10);
-}
-
-export function normalizarValorFiltroFecha(val) {
-    if (val == null || val === "" || val === undefined) {
-        return null;
+    return (
+      val.getFullYear() * 10000 +
+      (val.getMonth() + 1) * 100 +
+      val.getDate()
+    );
+  }
+  const s = String(val).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    const d = parseInt(m[3], 10);
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) {
+      return null;
     }
-    if (val instanceof Date && !Number.isNaN(val.getTime())) {
-        const y = val.getFullYear();
-        const m = String(val.getMonth() + 1).padStart(2, "0");
-        const d = String(val.getDate()).padStart(2, "0");
-        return `${y}-${m}-${d}`;
-    }
-    const s = String(val);
-    return s.length >= 10 ? s.substring(0, 10) : s;
+    return y * 10000 + mo * 100 + d;
+  }
+  const parsed = new Date(s);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return (
+    parsed.getFullYear() * 10000 +
+    (parsed.getMonth() + 1) * 100 +
+    parsed.getDate()
+  );
 }
 
 /**
- * @param {string|null|undefined} fechaItem Fecha del registro (ISO o YYYY-MM-DD)
- * @param {unknown} fechaDesde Límite inferior opcional
- * @param {unknown} fechaHasta Límite superior opcional
+ * Indica si la fecha del ítem cae dentro del rango [desde, hasta] (inclusive).
+ * Si ambos extremos son null/undefined/vacío, no hay filtro (siempre true).
+ *
+ * @param {string|Date|null|undefined} fechaItem
+ * @param {string|Date|null|undefined} desde
+ * @param {string|Date|null|undefined} hasta
  * @returns {boolean}
  */
-export function itemPasaFiltroFecha(fechaItem, fechaDesde, fechaHasta) {
-    const d = normalizarFechaItem(fechaItem);
-    if (!d) {
-        return true;
-    }
-    const desde = normalizarValorFiltroFecha(fechaDesde);
-    const hasta = normalizarValorFiltroFecha(fechaHasta);
-    if (desde && d < desde) {
-        return false;
-    }
-    if (hasta && d > hasta) {
-        return false;
-    }
+export function itemPasaFiltroFecha(fechaItem, desde, hasta) {
+  const sinDesde =
+    desde == null || desde === "" || desde === "null" || desde === "undefined";
+  const sinHasta =
+    hasta == null || hasta === "" || hasta === "null" || hasta === "undefined";
+
+  if (sinDesde && sinHasta) {
     return true;
+  }
+
+  if (
+    fechaItem == null ||
+    fechaItem === "" ||
+    fechaItem === "null" ||
+    fechaItem === "undefined"
+  ) {
+    return false;
+  }
+
+  const nItem = aYYYYMMDD(fechaItem);
+  if (nItem == null) {
+    return false;
+  }
+
+  if (!sinDesde) {
+    const nDesde = aYYYYMMDD(desde);
+    if (nDesde != null && nItem < nDesde) {
+      return false;
+    }
+  }
+
+  if (!sinHasta) {
+    const nHasta = aYYYYMMDD(hasta);
+    if (nHasta != null && nItem > nHasta) {
+      return false;
+    }
+  }
+
+  return true;
 }

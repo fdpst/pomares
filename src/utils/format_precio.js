@@ -15,15 +15,5 @@ export const format_precio = (numero) => {
   return `${float_numero.toFixed(decimals).replace(".", ",")}€`;
 };
 
-/** Autofacturas: siempre 2 decimales y separador de miles (ej. 1.234,56€). */
-export const format_precio_autofactura = (numero) => {
-  const n = parseFloat(numero);
-  if (numero === "" || numero === null || Number.isNaN(n)) {
-    return "0,00€";
-  }
-  const body = n
-    .toFixed(2)
-    .replace(".", ",")
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${body}€`;
-};
+/** Listas y formularios de autofacturas: misma regla de 2/3 decimales que `format_precio`. */
+export const format_precio_autofactura = format_precio;

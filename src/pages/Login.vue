@@ -78,25 +78,25 @@ export default {
 
 
 <template>
-  <div class="app-login">
+  <div class="fidifactu-login">
     <RouterLink
       to="/"
-      class="app-login__logo"
+      class="fidifactu-login__logo"
     >
       <img
         :src="logo"
-        alt="Martí Pomares, S.L"
+        alt="Logo Fidifactu"
       >
     </RouterLink>
 
-    <div class="app-login__card">
-      <h1 class="app-login__title">
+    <div class="fidifactu-login__card">
+      <h1 class="fidifactu-login__title">
         ¡Bienvenido!
       </h1>
 
       <VForm
         ref="refVForm"
-        class="app-login__form"
+        class="fidifactu-login__form"
         @submit.prevent="login"
       >
         <VTextField
@@ -110,7 +110,7 @@ export default {
           color="#DCFF2E"
           base-color="rgba(255, 255, 255, 0.8)"
           :rules="[requiredValidator, emailValidator]"
-          class="app-login__input"
+          class="fidifactu-login__input"
         />
 
         <VTextField
@@ -125,28 +125,28 @@ export default {
           :type="isPasswordVisible ? 'text' : 'password'"
           :append-inner-icon="isPasswordVisible ? 'ri-eye-off-line' : 'ri-eye-line'"
           @click:append-inner="isPasswordVisible = !isPasswordVisible"
-          class="app-login__input"
+          class="fidifactu-login__input"
         />
 
         <h4
           v-if="error != null"
-          class="app-login__error"
+          class="fidifactu-login__error"
         >
           {{ error }}
         </h4>
 
-        <div class="app-login__options">
+        <div class="fidifactu-login__options">
           <VCheckbox
             v-model="rememberMe"
             label="Recuérdame"
             hide-details
             color="#DCFF2E"
-            class="app-login__checkbox"
+            class="fidifactu-login__checkbox"
           />
 
           <RouterLink
             to="/recuperar-contrasena"
-            class="app-login__link"
+            class="fidifactu-login__link"
           >
             ¿Has olvidado tu contraseña?
           </RouterLink>
@@ -154,7 +154,7 @@ export default {
 
         <VBtn
           type="submit"
-          class="app-login__submit"
+          class="fidifactu-login__submit"
           :disabled="isloading"
           color="#DCFF2E"
         >
@@ -163,7 +163,7 @@ export default {
       </VForm>
     </div>
 
-    <p class="app-login__footer">
+    <p class="fidifactu-login__footer">
       2025 ©
     </p>
   </div>
@@ -171,7 +171,7 @@ export default {
 
 
 <style lang="scss">
-.app-login {
+.fidifactu-login {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -352,7 +352,7 @@ export default {
 }
 
 @media (max-width: 420px) {
-  .app-login {
+  .fidifactu-login {
     padding: 1.5rem 1rem;
 
     &__card {

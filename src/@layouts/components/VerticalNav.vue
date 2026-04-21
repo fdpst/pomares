@@ -62,6 +62,11 @@ const handleNavScroll = evt => {
 }
 
 const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
+
+/** Títulos con forma jurídica (p. ej. «, S.L» / «,S.L») necesitan fuente algo menor en el ancho fijo del menú. */
+const tituloIncluyeSL = computed(() =>
+  /,\s*S\.L\.?\s*$/i.test(String(layoutConfig.app?.title ?? '').trim()),
+)
 </script>
 
 <template>
@@ -91,8 +96,9 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
             <h1
               v-show="!hideTitleAndIcon"
               class="app-logo-title leading-normal"
+              :class="{ 'app-logo-title--sl': tituloIncluyeSL }"
             >
-              Martí Pomares, S.L
+              {{ layoutConfig.app.title }}
             </h1>
           </Transition>
           
@@ -160,14 +166,20 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
   min-inline-size: 0;
 
   .app-logo-title {
-    font-size: 0.8125rem;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    font-size: calc(1.25rem - 2px);
     font-weight: 600;
     line-height: 1.35;
     color: #DCFF2E;
-    white-space: normal;
-    overflow-wrap: break-word;
-    hyphens: auto;
-    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--sl {
+      font-size: 0.9375rem; /* ~15px: cabe «…, S.L» en el lateral */
+      letter-spacing: -0.02em;
+    }
   }
 }
 </style>
@@ -211,8 +223,6 @@ const hideTitleAndIcon = configStore.isVerticalNavMini(isHovered)
 
   .app-title-wrapper {
     margin-inline-end: auto;
-    flex: 1 1 0;
-    min-inline-size: 0;
   }
 
   .nav-items {

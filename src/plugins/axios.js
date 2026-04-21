@@ -6,11 +6,13 @@ axios.defaults.headers.common['Content-Type'] = 'application/json'
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content')
 axios.defaults.withCredentials = true;
 
-// Raíz de la app Laravel (evita que con URL .../lista-proveedores/ las rutas tipo "api/foo"
-// se resuelvan como .../lista-proveedores/api/foo).
+// Raíz de la app Laravel (evita que con URL .../form-facturas-recibidas-update/10 las rutas
+// tipo "api/foo" se resuelvan como .../form-facturas-recibidas-update/api/foo → 404).
 const viteBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const metaApp = document.querySelector('meta[name="app-url"]')?.getAttribute('content')?.trim().replace(/\/$/, '') || ''
-axios.defaults.baseURL = viteBase || metaApp || ''
+const originFallback =
+  typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+axios.defaults.baseURL = viteBase || metaApp || originFallback
 
 // Interceptor para agregar cliente_id cuando el usuario es gestor
 axios.interceptors.request.use(
@@ -40,18 +42,47 @@ axios.interceptors.request.use(
       // Agregar como header
       config.headers['X-Selected-Cliente-Id'] = selectedClienteId
       
-      // También agregar como parámetro en la URL si es GET
-      if (config.method === 'get') {
+      const method = (config.method || 'get').toLowerCase()
+
+      // GET, DELETE: cliente_id en query para GestorHelper
+      if (method === 'get' || method === 'delete') {
         config.params = config.params || {}
         if (config.params.cliente_id === undefined || config.params.cliente_id === null) {
           config.params.cliente_id = selectedClienteId
         }
       }
-      
-      // Para POST/PUT/PATCH, NO agregar automáticamente el cliente_id
-      // El cliente_id debe ser seleccionado explícitamente por el usuario
-      // Solo agregar si ya existe en el body y no es null/undefined
-      // Esto permite que la validación del backend funcione correctamente
+
+      // PUT/PATCH: query (Laravel Request::query en algunos controladores)
+      if (method === 'put' || method === 'patch') {
+        config.params = config.params || {}
+        if (config.params.cliente_id === undefined || config.params.cliente_id === null) {
+          config.params.cliente_id = selectedClienteId
+        }
+      }
+
+      // POST/PUT/PATCH con FormData: el helper GestorHelper lee cliente_id del body;
+      // sin esto, rutas como update-usuario no resolvían al cliente y fallaba el guardado.
+      if (
+        method !== 'get' &&
+        method !== 'delete' &&
+        config.data instanceof FormData &&
+        !config.data.has('cliente_id')
+      ) {
+        config.data.append('cliente_id', selectedClienteId)
+      }
+
+      // POST/PUT/PATCH JSON (objeto plano): merge cliente_id para GestorHelper::input()
+      if (
+        (method === 'post' || method === 'put' || method === 'patch') &&
+        config.data &&
+        typeof config.data === 'object' &&
+        !(config.data instanceof FormData) &&
+        !Array.isArray(config.data)
+      ) {
+        if (config.data.cliente_id === undefined || config.data.cliente_id === null) {
+          config.data = { ...config.data, cliente_id: selectedClienteId }
+        }
+      }
     }
     
     return config

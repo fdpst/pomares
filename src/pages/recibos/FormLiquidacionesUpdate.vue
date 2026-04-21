@@ -35,7 +35,7 @@
                             :items="proveedores"
                             item-title="nombre"
                             item-value="id"
-                            label="Distribuidor"></VSelect>
+                            label="Punto de venta"></VSelect>
                     </VCol>
 
                     <VCol
@@ -215,7 +215,7 @@
                         cols="12"
                         lg="5">
                         <p class="text-caption text-medium-emphasis mb-1">
-                            Comisiones del distribuidor
+                            Comisiones del punto de venta
                         </p>
                         <VCard
                             v-if="deduccionesComisionLines.length"
@@ -439,11 +439,14 @@
 
                     <VBtn
                         rounded="pill"
-                        variant="outlined"
+                        variant="tonal"
+                        color="info"
+                        prepend-icon="ri-file-copy-line"
+                        class="mr-1"
                         @click="duplicarDialog = true"
-                        :disabled="isloading"
-                        >Duplicar</VBtn
-                    >
+                        :disabled="isloading">
+                        Duplicar
+                    </VBtn>
                 </VRow>
             </VCardText>
         </VForm>
@@ -739,7 +742,7 @@ export default {
                     this.loadComisionesProveedor();
                 },
                 (res) => {
-                    $toast.error("Error consultando distribuidores");
+                    $toast.error("Error consultando puntos de venta");
                 }
             );
         },
@@ -750,7 +753,7 @@ export default {
                     this.proveedores = res.data;
                 },
                 (res) => {
-                    $toast.error("Error consultando distribuidores");
+                    $toast.error("Error consultando puntos de venta");
                 }
             );
         },

@@ -131,7 +131,7 @@
                                             :items="proveedores"
                                             item-title="nombre"
                                             item-value="id"
-                                            label="Distribuidor"
+                                            label="Proveedor"
                                             outlined
                                             @change="getFacturasEntrantes">
                                         </VAutocomplete>
@@ -856,7 +856,7 @@ export default {
                 cuenta_contable_id: this.factura.cuenta_proveedor_id,
                 cuenta: this.factura.cuenta_proveedor,
                 documento: "",
-                descripcion: "Compra a distribuidor",
+                descripcion: "Compra a proveedor",
                 tag: "",
                 debe: 0,
                 // haber: this.factura.total - this.factura.valor_iva,

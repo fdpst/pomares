@@ -24,6 +24,33 @@
         </VCol>
       </VRow>
 
+      <VRow class="mt-2 align-end">
+        <VCol cols="12" md="4">
+          <AppDateTimePicker
+            v-model="fechaDesde"
+            label="Fecha desde"
+            prepend-icon="ri-calendar-fill"
+          />
+        </VCol>
+        <VCol cols="12" md="4">
+          <AppDateTimePicker
+            v-model="fechaHasta"
+            label="Fecha hasta"
+            prepend-icon="ri-calendar-fill"
+          />
+        </VCol>
+        <VCol cols="12" md="4" class="d-flex align-center pb-2">
+          <VBtn
+            variant="text"
+            color="secondary"
+            size="small"
+            @click="limpiarFiltroFechas"
+          >
+            Quitar filtro de fechas
+          </VBtn>
+        </VCol>
+      </VRow>
+
     </div>
 
 
@@ -45,6 +72,11 @@
       </template>
       <template v-slot:item.iva_percent="{ item }">
         {{ item.iva_percent ?? 0 }}{{ typeof item.iva_percent === 'string' && item.iva_percent.includes('%') ? '' : '%' }}
+      </template>
+      <template v-slot:item.created_at="{ item }">
+        <span v-if="item.created_at != null">
+          {{ formatDateEs(item.created_at) }}
+        </span>
       </template>
       <template v-slot:item.action="{ item }">
         <VIcon small class="mr-2" color="grey-600" @click="openFormArticulo(item)">
@@ -143,6 +175,7 @@
 
 <script>
 import debounce from 'lodash/debounce';
+import { formatDateEs } from '@core/utils/formatters';
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
 import { paginationMeta } from '@/utils/paginationMeta.js';
 import FormArticulo from './FormArticulos.vue';
@@ -159,6 +192,8 @@ export default {
       modalEliminar: false,
       item: "",
       search: "",
+      fechaDesde: null,
+      fechaHasta: null,
       servicios: [],
       totalServicios: 0,
       loadingServicios: false,
@@ -209,6 +244,14 @@ export default {
         this.getServiciosDebounced();
       },
     },
+    fechaDesde() {
+      this.pagination.page = 1;
+      this.getServicios();
+    },
+    fechaHasta() {
+      this.pagination.page = 1;
+      this.getServicios();
+    },
     pagination: {
       handler() {
         this.getServicios();
@@ -218,7 +261,12 @@ export default {
   },
 
   methods: {
+    formatDateEs,
     paginationMeta,
+    limpiarFiltroFechas() {
+      this.fechaDesde = null;
+      this.fechaHasta = null;
+    },
     getServiciosDebounced: debounce(function () {
       this.pagination.page = 1;
       this.getServicios();
@@ -232,6 +280,8 @@ export default {
             amount: this.pagination.itemsPerPage,
             page: this.pagination.page,
             search: this.search || undefined,
+            fecha_desde: this.fechaDesde || undefined,
+            fecha_hasta: this.fechaHasta || undefined,
           },
         })
         .then(

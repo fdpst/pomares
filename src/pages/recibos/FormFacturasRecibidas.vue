@@ -38,7 +38,7 @@
                             :items="proveedores"
                             item-title="nombre"
                             item-value="id"
-                            label="Distribuidor"
+                            label="Punto de venta"
                             :rules="[requiredValidator]"></VSelect>
                     </VCol>
 
@@ -450,7 +450,7 @@ export default {
                     this.proveedores = res.data;
                 },
                 (res) => {
-                    $toast.error("Error consultando distribuidores");
+                    $toast.error("Error consultando puntos de venta");
                 }
             );
         },
