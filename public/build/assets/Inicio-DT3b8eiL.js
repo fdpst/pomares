@@ -1,1 +1,0 @@
-import{K as e,f as t,e as a,a5 as o,o as c,b as r,t as n,af as s}from"./main-WTrfPIHh.js";const i={name:"Inicio"};function l(d,p,f,_,x,u){return c(),t(o,{title:"Inicio"},{default:a(()=>[r(s,{class:"text-body-1"},{default:a(()=>[n(" Bienvenido. Utilice el menú lateral para navegar por la aplicación. ")]),_:1})]),_:1})}const V=e(i,[["render",l]]);export{V as default};
