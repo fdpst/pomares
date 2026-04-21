@@ -312,7 +312,7 @@
                                     </div>
                                     <div
                                         class="text-caption liquidacion-resumen-subtitulo">
-                                        Subtotal, IVA artículos, comisiones (base + IVA 21%) e importe
+                                        Subtotal, IVA artículos, comisiones deducidas e importe
                                     </div>
                                 </div>
                             </div>
@@ -347,23 +347,6 @@
                                             >-{{
                                                 format_precio(
                                                     totalDeduccionComisiones
-                                                )
-                                            }}</span
-                                        >
-                                    </div>
-                                    <div
-                                        v-if="deduccionesComisionLines.length"
-                                        class="liquidacion-resumen-line text-body-1">
-                                        <span class="text-medium-emphasis"
-                                            >IVA comisiones ({{
-                                                ivaPctComisionesLiquidacion
-                                            }}%)</span
-                                        >
-                                        <span
-                                            class="font-weight-bold text-error"
-                                            >-{{
-                                                format_precio(
-                                                    ivaComisionesLiquidacion
                                                 )
                                             }}</span
                                         >
@@ -528,7 +511,6 @@ export default {
             total: 0,
             edit_item: {},
             comisionesProveedor: [],
-            ivaPctComisionesLiquidacion: IVA_PCT_COMISIONES_LIQUIDACION,
         };
     },
 
@@ -604,11 +586,6 @@ export default {
             if (item?._total) {
                 return {
                     class: "border-t",
-                };
-            }
-            if (item?._ivaRow) {
-                return {
-                    class: "border-t border-opacity-50",
                 };
             }
             return {};
@@ -960,13 +937,6 @@ export default {
                 ...row,
                 __key: `com-line-${idx}`,
             }));
-            rows.push({
-                __key: "com-iva",
-                _ivaRow: true,
-                concepto: `IVA comisiones (${IVA_PCT_COMISIONES_LIQUIDACION}%)`,
-                detalleUnitario: "",
-                monto: this.ivaComisionesLiquidacion,
-            });
             rows.push({
                 __key: "com-total",
                 _total: true,
