@@ -257,6 +257,7 @@
         <VCol cols="12">
           <VBtn
             rounded="pill"
+            color="primary"
             @click="saveProveedor"
             :disabled="isloading"
             class="mr-2"
@@ -264,12 +265,12 @@
           >
 
           <VBtn
-              rounded="pill"
-              to="/lista-proveedores"
-              :disabled="isloading"
-              color="secondary"
-              >Cancelar</VBtn
-            >
+            rounded="pill"
+            to="/lista-proveedores"
+            :disabled="isloading"
+            color="secondary"
+            >Cancelar</VBtn
+          >
         </VCol>
       </VRow>
     </div>
@@ -313,10 +314,18 @@
             "
           />
         </VCardText>
-        <VCardActions class="pb-4">
+        <VCardActions class="pb-4 px-4">
           <VSpacer />
-          <VBtn variant="text" @click="dialogComision = false">Cancelar</VBtn>
-          <VBtn color="primary" @click="guardarComision">Guardar</VBtn>
+          <VBtn
+            rounded="pill"
+            color="secondary"
+            class="mr-2"
+            @click="dialogComision = false"
+            >Cancelar</VBtn
+          >
+          <VBtn rounded="pill" color="primary" @click="guardarComision"
+            >Guardar</VBtn
+          >
         </VCardActions>
       </VCard>
     </VDialog>

@@ -1,1 +1,0 @@
-import{a2 as t}from"./main-BTDsUzxQ.js";const o=(n,a)=>{var c;if(n==null&&a==null)return!0;const r=t();return r?r.proxy&&"$can"in r.proxy?(c=r.proxy)==null?void 0:c.$can(n,a):!0:!1},u=n=>{const a=n.children.some(r=>o(r.action,r.subject));return n.action&&n.subject?o(n.action,n.subject)&&a:a};export{o as a,u as c};

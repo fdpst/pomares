@@ -1,1 +1,0 @@
-import{b_ as c}from"./main-BTDsUzxQ.js";class o{static getInstance(){return new this}handleSearch(e){return this.debounce(this.search,1e3)}async search(e){return(await c.get(`/api/get-clientes?search=${e||""}`)).data}debounce(e,a){let t;return function(){const s=this,r=arguments;clearTimeout(t),t=setTimeout(()=>{e.apply(s,r)},a)}}}export{o as C};

@@ -425,8 +425,7 @@
 import { formatPrice } from "@/@core/utils/formatters";
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
 
-/** IVA aplicado al total de comisiones (misma lógica que factura por comisiones en backend). */
-const IVA_PCT_COMISIONES_LIQUIDACION = 21;
+/** El IVA del 21 % sobre comisiones solo se aplica al generar facturas recibidas (LiquidacionesController::desgloseComisionLiquidacion). */
 
 export default {
     components: {
@@ -837,10 +836,10 @@ export default {
                 sumaIva += (subtotal * ivaPct) / 100;
             });
 
-            const comisionesConIva = this.totalComisionesConIvaLiquidacion;
+            const deduccionComisiones = this.totalDeduccionComisiones;
             this.subtotal = sub_total;
             this.totalIva = sumaIva;
-            this.total = sub_total + sumaIva - comisionesConIva;
+            this.total = sub_total + sumaIva - deduccionComisiones;
         },
     },
     computed: {
@@ -915,19 +914,6 @@ export default {
                 0
             );
         },
-        ivaComisionesLiquidacion() {
-            const base = this.totalDeduccionComisiones;
-            return (
-                Math.round(
-                    (base * IVA_PCT_COMISIONES_LIQUIDACION) / 100 * 100
-                ) / 100
-            );
-        },
-        totalComisionesConIvaLiquidacion() {
-            const base = this.totalDeduccionComisiones;
-            const iva = this.ivaComisionesLiquidacion;
-            return Math.round((base + iva) * 100) / 100;
-        },
         comisionesTablaItems() {
             const lines = this.deduccionesComisionLines;
             if (!lines.length) {
@@ -940,9 +926,9 @@ export default {
             rows.push({
                 __key: "com-total",
                 _total: true,
-                concepto: "Total comisiones (IVA incl.)",
+                concepto: "Total comisiones",
                 detalleUnitario: "",
-                monto: this.totalComisionesConIvaLiquidacion,
+                monto: this.totalDeduccionComisiones,
             });
             return rows;
         },
