@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FacturasRecibidasExport;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\CorrelativoCo;
 use App\Helpers\GestorHelper;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -58,6 +59,22 @@ class FacturaRecibidasController extends Controller
     }
 
     /**
+     * Siguiente Nº de autofactura en formato CO-N (serie común con liquidaciones del usuario).
+     */
+    public function siguienteNroCo(Request $request)
+    {
+        $effectiveUserId = GestorHelper::getUserId($request);
+
+        if (!$effectiveUserId) {
+            return response()->json(['nro' => 'CO-1'], 200);
+        }
+
+        return response()->json([
+            'nro' => CorrelativoCo::siguiente($effectiveUserId),
+        ], 200);
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -76,6 +93,11 @@ class FacturaRecibidasController extends Controller
         try {
             DB::beginTransaction();
 
+            $nroRaw = trim((string) ($request->nro_factura ?? ''));
+            if ($nroRaw === '' || strcasecmp($nroRaw, 'null') === 0) {
+                $nroRaw = CorrelativoCo::siguiente($effectiveUserId);
+            }
+
             $factRec = new FacturaRecibida;
             $factRec->user_id = $effectiveUserId;
             $factRec->proveedor_id = $request->proveedor_id;
@@ -83,7 +105,10 @@ class FacturaRecibidasController extends Controller
             $factRec->fecha = $request->fecha;
             $factRec->retencion_id = ($request->retencion_id === 'null') ? null : $request->retencion_id;
             $factRec->total = $request->total;
-            $factRec->nro_factura = $request->nro_factura;
+            $factRec->nro_factura = $nroRaw;
+            $factRec->contabilizado = $request->has('contabilizado')
+                ? $request->boolean('contabilizado')
+                : false;
             $factRec->save();
 
             // Crear el directorio en el disco 'recibos' con permisos/visibilidad correctos
@@ -122,6 +147,27 @@ class FacturaRecibidasController extends Controller
         $fr = FacturaRecibida::with(['items'])->find($id);
 
         return response()->json(['success' => $fr], 200);
+    }
+
+    /**
+     * Marca o desmarca contabilizado desde el listado (sin enviar todo el formulario).
+     */
+    public function setContabilizado(Request $request, $id)
+    {
+        $fr = FacturaRecibida::findOrFail($id);
+        $fallbackUserId = $request->user_id ?? $fr->user_id;
+        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+
+        if (!$effectiveUserId || (int) $fr->user_id !== (int) $effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+
+        $fr->contabilizado = $request->boolean('contabilizado');
+        $fr->save();
+
+        return response()->json([
+            'facturaRecibida' => $fr->fresh(['proveedor']),
+        ], 200);
     }
 
     /**
@@ -180,6 +226,43 @@ class FacturaRecibidasController extends Controller
     }
 
     /**
+     * PDF de resumen de liquidación (artículos) asociado a la autofactura generada desde liquidaciones.
+     */
+    public function resumenLiquidacionPdf(Request $request, $id)
+    {
+        $fallbackUserId = $request->query('user_id');
+        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+
+        if (!$effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+
+        $factura = FacturaRecibida::where('id', $id)
+            ->where('user_id', $effectiveUserId)
+            ->first();
+
+        if (!$factura) {
+            return response()->json(['error' => 'Autofactura no encontrada'], 404);
+        }
+
+        $path = trim((string) ($factura->resumen_liquidacion ?? ''));
+        if ($path === '') {
+            return response()->json(['error' => 'No hay resumen de liquidación para esta autofactura'], 404);
+        }
+
+        if (! Storage::disk('recibos')->exists($path)) {
+            return response()->json(['error' => 'El archivo de resumen no está disponible'], 404);
+        }
+
+        $bin = Storage::disk('recibos')->get($path);
+
+        return response($bin, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="resumen_liquidacion_' . $factura->id . '.pdf"',
+        ]);
+    }
+
+    /**
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -208,6 +291,9 @@ class FacturaRecibidasController extends Controller
             $frU->retencion_id = ($request->retencion_id === 'null') ? null : $request->retencion_id;
             $frU->total = $request->total;
             $frU->nro_factura = $request->nro_factura;
+            if ($request->has('contabilizado')) {
+                $frU->contabilizado = $request->boolean('contabilizado');
+            }
             $frU->save();
 
             $relativeDir  = storage_path('app/public/recibos/userId_' .  $effectiveUserId . '/');
@@ -284,10 +370,17 @@ class FacturaRecibidasController extends Controller
      */
     public function destroy($id)
     {
-        $fr = FacturaRecibida::find($id)->delete();
-        return response()->json([
+        $row = FacturaRecibida::find($id);
+        if ($row) {
+            $resPath = trim((string) ($row->resumen_liquidacion ?? ''));
+            if ($resPath !== '' && Storage::disk('recibos')->exists($resPath)) {
+                Storage::disk('recibos')->delete($resPath);
+            }
+            $row->delete();
+        }
 
-            'message' => 'Delete Successfully'
+        return response()->json([
+            'message' => 'Delete Successfully',
         ]);
     }
 
@@ -363,7 +456,10 @@ class FacturaRecibidasController extends Controller
                 'retencion_id' => ($request->retencion_id === 'null') ? null : ($request->retencion_id ?? $factura->retencion_id),
                 'descripcion' => $request->descripcion ?? $factura->descripcion,
                 'imagen' => $request->imagen ?? $factura->imagen,
+                'resumen_liquidacion' => null,
+                'liquidacion_resumen_codigo' => null,
                 'total' => $request->total ?? $factura->total,
+                'contabilizado' => false,
             ]);
 
             $items = isset($request->servicios) ? json_decode($request->servicios, true) : $factura->items;

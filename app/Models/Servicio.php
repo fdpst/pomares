@@ -35,6 +35,11 @@ class Servicio extends Model
       return $this->hasMany(Albaran::class);
     }
     public function Iva(){
-      return $this->hasOne(Iva::class, 'id', 'iva_id');
+        return $this->hasOne(Iva::class, 'id', 'iva_id');
+    }
+
+    public function precioCambios()
+    {
+        return $this->hasMany(ServicioPrecioCambio::class, 'servicio_id');
     }
 }

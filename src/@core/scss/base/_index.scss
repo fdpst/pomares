@@ -36,6 +36,15 @@ a {
   text-decoration: none;
 }
 
+// RouterLink en tablas (icono lápiz): el `a` heredaba primary (lima); usar color de texto
+a.action-buttons {
+  color: rgb(var(--v-theme-on-surface));
+
+  .v-icon {
+    color: rgb(var(--v-theme-on-surface)) !important;
+  }
+}
+
 // Vuetify 3 don't provide margin bottom style like vuetify 2
 p {
   margin-block-end: 1rem;

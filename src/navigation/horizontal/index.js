@@ -38,14 +38,14 @@ const items = [
         title: "Usuarios",
         icon: { icon: "ri-group-2-fill" },
         to: "/lista-usuario",
-        user: [1],
+        user: [1, 2, 3, 4],
     },
 
     {
         title: "Contraseñas",
         icon: { icon: "ri-key-fill" },
         to: "/lista-passwords",
-        user: [1],
+        user: [1, 2, 3, 4],
     },
 ];
 

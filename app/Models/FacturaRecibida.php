@@ -22,7 +22,14 @@ class FacturaRecibida extends Model
       "retencion_id",
       "descripcion",
       "imagen",
-      "total"
+      "resumen_liquidacion",
+      "liquidacion_resumen_codigo",
+      "total",
+      "contabilizado",
+    ];
+
+    protected $casts = [
+        'contabilizado' => 'boolean',
     ];
 
     public function proveedor(){

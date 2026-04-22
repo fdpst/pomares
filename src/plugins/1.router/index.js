@@ -174,9 +174,11 @@ router.beforeEach((to) => {
             };
         } else if (to.meta.req_user)
             return authUser == 2 ? true : {path: "/404"};
-        else if (to.meta.req_admin)
-            return authUser == 1 ? true : {path: "/404"};
-        else if (to.meta.req_admin_or_user)
+        else if (to.meta.req_admin) {
+            // Misma visibilidad que admin: cualquier rol de aplicación autenticado (1–4)
+            const r = parseInt(authUser, 10);
+            return [1, 2, 3, 4].includes(r) ? true : { path: "/404" };
+        } else if (to.meta.req_admin_or_user)
             return authUser == 1 || authUser == 2 ? true : {path: "/404"};
 
         return true;

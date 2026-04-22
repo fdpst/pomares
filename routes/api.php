@@ -101,6 +101,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('get-servicios/{user_id}', 'ServicioController@getServicios');
   Route::get('get-servicio-by-id/{servicio_id}', 'ServicioController@getServicioByid');
   Route::post('save-servicio', 'ServicioController@saveServicio');
+  Route::get('servicio-precio-cambios/{servicio_id}', 'ServicioController@getServicioPrecioCambios');
   Route::get('delete-servicio/{id}', 'ServicioController@deleteServicio');
   Route::get('servicio/numero/{venta}', 'ServicioController@getLastNumber');
   /*Rutas Albaranes*/
@@ -153,10 +154,13 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('delete-factura/{factura_id}', 'FacturaController@deleteFactura');
   Route::get('delete-factura-proforma/{factura_id}', 'FacturaController@deleteFacturaProforma'); // proforma
   Route::get('facturas-recibidas', 'FacturaRecibidasController@index');
+  Route::get('facturas-recibidas-siguiente-co', 'FacturaRecibidasController@siguienteNroCo');
   Route::get('facturas-recibidas-show/{idFac}', 'FacturaRecibidasController@show');
   Route::get('facturas-recibidas-pdf/{id}', 'FacturaRecibidasController@pdf');
+  Route::get('facturas-recibidas-resumen-liquidacion-pdf/{id}', 'FacturaRecibidasController@resumenLiquidacionPdf');
   Route::post('facturas-recibidas', 'FacturaRecibidasController@store');
   Route::post('facturas-recibidas-update/{idFac}', 'FacturaRecibidasController@update');
+  Route::post('facturas-recibidas-contabilizado/{id}', 'FacturaRecibidasController@setContabilizado');
   Route::post('facturas-recibidas-delete/{idFactRec}', 'FacturaRecibidasController@destroy');
   Route::get('get-data-albaranes/{cliente_id}', 'FacturaController@getDataAlbaranes');
   Route::post('duplicar-factura-recibida', 'FacturaRecibidasController@duplicarFactura');

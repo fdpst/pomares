@@ -49,6 +49,20 @@
                 </VRow>
 
                 <VRow
+                    dense
+                    class="mt-2">
+                    <VCol
+                        cols="12"
+                        md="4">
+                        <VCheckbox
+                            v-model="facturaRec.contabilizado"
+                            label="Contabilizado"
+                            hide-details
+                            density="compact" />
+                    </VCol>
+                </VRow>
+
+                <VRow
                     class="mt-4"
                     dense>
                     <VCol
@@ -195,7 +209,7 @@
                                 >{{ item.iva }}%</template
                             >
                             <template v-slot:item.total="{item}">{{
-                                format_precio(item.total)
+                                importeBaseLinea(item)
                             }}</template>
                             <template v-slot:item.action="{item}">
                                 <VIcon
@@ -331,17 +345,6 @@
 
                     <VBtn
                         rounded="pill"
-                        variant="tonal"
-                        color="info"
-                        prepend-icon="ri-file-copy-line"
-                        class="mr-1"
-                        @click="duplicarDialog = true"
-                        :disabled="isloading">
-                        Duplicar
-                    </VBtn>
-
-                    <VBtn
-                        rounded="pill"
                         variant="flat"
                         color="error"
                         prepend-icon="ri-file-pdf-line"
@@ -350,44 +353,21 @@
                         @click="verPdfAutofactura">
                         Ver PDF
                     </VBtn>
+
+                    <VBtn
+                        rounded="pill"
+                        variant="tonal"
+                        color="teal-darken-2"
+                        prepend-icon="ri-file-list-3-line"
+                        class="ml-1"
+                        :disabled="isloading || !facturaRec.id || !facturaRec.resumen_liquidacion"
+                        title="Resumen de artículos de las liquidaciones asociadas"
+                        @click="verPdfResumenLiquidacion">
+                        Resumen liquidación
+                    </VBtn>
                 </VRow>
             </VCardText>
         </VForm>
-
-        <VDialog
-            v-model="duplicarDialog"
-            max-width="500">
-            <VCard>
-                <VCardTitle
-                    style="background-color: #2196f3"
-                    class="text-h5 text-center pa-4"
-                    >Duplicar autofactura</VCardTitle
-                >
-                <VCardText class="text-center pt-6">
-                    <h5 class="text-h5">
-                        ¿Está seguro de que desea crear una nueva factura con
-                        los datos proporcionados?
-                    </h5>
-                    <!-- <p class="text-center">Esta acción duplicará la factura existente considerando cambios recientes.</p> -->
-                </VCardText>
-                <VCardActions class="pb-5">
-                    <VSpacer></VSpacer>
-                    <VBtn
-                        color="secondary"
-                        large
-                        @click="duplicarDialog = false">
-                        Cancelar
-                    </VBtn>
-                    <VBtn
-                        color="success"
-                        large
-                        @click="duplicarFacturaRecibida()">
-                        Confirmar
-                    </VBtn>
-                    <VSpacer></VSpacer>
-                </VCardActions>
-            </VCard>
-        </VDialog>
 
         <DialogArticulos
             @saved="SaveTipoServicio"
@@ -419,6 +399,8 @@ export default {
                 items: [],
                 retencion_id: null,
                 nro_factura: null,
+                resumen_liquidacion: null,
+                contabilizado: false,
             },
 
             servicio: {
@@ -473,8 +455,6 @@ export default {
             array_iva: [],
             dialog_ser: false,
             servicio_dialog: {},
-            duplicarDialog: false,
-            duplicar: false,
         };
     },
 
@@ -494,6 +474,18 @@ export default {
 
     methods: {
         format_precio_autofactura,
+        /** Base imponible de la línea (sin IVA), misma fórmula que el PDF. */
+        importeBaseLinea(item) {
+            const c = parseFloat(item.cantidad);
+            const p = parseFloat(item.precio);
+            const d = parseFloat(item.dcto) || 0;
+            if (Number.isNaN(c) || Number.isNaN(p)) {
+                return "";
+            }
+            const bruto = c * p;
+            const base = bruto * (1 - d / 100);
+            return this.format_precio_autofactura(base);
+        },
         formatCantidadFactura(val) {
             const n = Number(val);
             if (Number.isNaN(n)) {
@@ -552,6 +544,7 @@ export default {
                     if (!this.facturaRec?.user_id) {
                         this.facturaRec.user_id = this.effectiveUserId;
                     }
+                    this.facturaRec.contabilizado = !!this.facturaRec.contabilizado;
                     if (this.facturaRec.imagen != null) {
                         JSON.parse(this.facturaRec.imagen);
                     }
@@ -633,6 +626,54 @@ export default {
                 });
         },
 
+        verPdfResumenLiquidacion() {
+            if (!this.facturaRec.id || !this.facturaRec.resumen_liquidacion) {
+                return;
+            }
+            axios
+                .get(
+                    `api/facturas-recibidas-resumen-liquidacion-pdf/${this.facturaRec.id}`,
+                    {
+                        params: {
+                            user_id: this.effectiveUserId,
+                            _t: Date.now(),
+                        },
+                        responseType: "blob",
+                    }
+                )
+                .then((response) => {
+                    const blob = response.data;
+                    if (blob.type === "application/json") {
+                        blob.text().then((t) => {
+                            try {
+                                const j = JSON.parse(t);
+                                $toast.error(
+                                    j.error ||
+                                        j.message ||
+                                        "No hay resumen disponible"
+                                );
+                            } catch {
+                                $toast.error("No hay resumen disponible");
+                            }
+                        });
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const win = window.open(url, "_blank", "noopener,noreferrer");
+                    if (!win) {
+                        URL.revokeObjectURL(url);
+                        $toast.error(
+                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                        );
+                        return;
+                    }
+                    setTimeout(() => URL.revokeObjectURL(url), 120000);
+                })
+                .catch(() => {
+                    $toast.error("Error al abrir el resumen de liquidación");
+                });
+        },
+
         saveFactRecibidas() {
             let formData = new FormData();
 
@@ -645,6 +686,10 @@ export default {
             formData.append("total", this.total);
             formData.append("nro_factura", this.facturaRec.nro_factura);
             formData.append("servicios", JSON.stringify(this.facturaRec.items));
+            formData.append(
+                "contabilizado",
+                this.facturaRec.contabilizado ? "1" : "0"
+            );
 
             axios
                 .post(
@@ -818,39 +863,6 @@ export default {
                     $toast.error("Error consultando artículos");
                 }
             );
-        },
-
-        duplicarFacturaRecibida() {
-            let formData = new FormData();
-
-            formData.append("id", this.facturaRec.id);
-            formData.append("user_id", this.facturaRec.user_id);
-            formData.append("fecha", this.facturaRec.fecha);
-            formData.append("descripcion", this.facturaRec.descripcion);
-            formData.append("proveedor_id", this.facturaRec.proveedor_id);
-            formData.append("retencion_id", this.facturaRec.retencion_id);
-            formData.append("total", this.total);
-            formData.append("nro_factura", this.facturaRec.nro_factura);
-            formData.append("servicios", JSON.stringify(this.facturaRec.items));
-
-            axios
-                .post(`api/duplicar-factura-recibida`, formData, {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                })
-                .then(
-                    (res) => {
-                        // const response = res.data.success
-                        $toast.sucs("Autofactura duplicada con exito");
-                        this.$router.push("/lista-facturas-recibidas");
-                        // this.$router.replace(`form-facturas-recibidas-update/${response.id}`)
-                        // this.array_iva = res.data.success;
-                    },
-                    (err) => {
-                        $toast.error("Error consultando artículos");
-                    }
-                );
         },
     },
     computed: {

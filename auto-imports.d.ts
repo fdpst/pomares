@@ -23,6 +23,7 @@ declare global {
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('./src/@core/utils/formatters.js')['avatarText']
   const betweenValidator: typeof import('./src/@core/utils/validators.js')['betweenValidator']
+  const borrarFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -56,6 +57,7 @@ declare global {
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const emailValidator: typeof import('./src/@core/utils/validators.js')['emailValidator']
+  const escribirFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroFechasLista']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const filterColumnsByType: typeof import('./src/utils/documentColumns.js')['filterColumnsByType']
   const formatDate: typeof import('./src/@core/utils/formatters.js')['formatDate']
@@ -88,6 +90,7 @@ declare global {
   const isToday: typeof import('./src/@core/utils/helpers.js')['isToday']
   const itemPasaFiltroFecha: typeof import('./src/utils/filtroFechaLista.js')['itemPasaFiltroFecha']
   const kFormatter: typeof import('./src/@core/utils/formatters.js')['kFormatter']
+  const leerFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerFiltroFechasLista']
   const lengthValidator: typeof import('./src/@core/utils/validators.js')['lengthValidator']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
   const logicNot: typeof import('@vueuse/math')['logicNot']
@@ -412,6 +415,7 @@ declare module 'vue' {
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['betweenValidator']>
+    readonly borrarFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -445,6 +449,7 @@ declare module 'vue' {
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly emailValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['emailValidator']>
+    readonly escribirFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroFechasLista']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly filterColumnsByType: UnwrapRef<typeof import('./src/utils/documentColumns.js')['filterColumnsByType']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDate']>
@@ -475,6 +480,7 @@ declare module 'vue' {
     readonly isToday: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isToday']>
     readonly itemPasaFiltroFecha: UnwrapRef<typeof import('./src/utils/filtroFechaLista.js')['itemPasaFiltroFecha']>
     readonly kFormatter: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['kFormatter']>
+    readonly leerFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerFiltroFechasLista']>
     readonly lengthValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>

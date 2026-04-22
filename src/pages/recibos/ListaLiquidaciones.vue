@@ -23,7 +23,7 @@
                         color="secondary"
                         class="mt-1"
                         :disabled="selected.length === 0"
-                        title="Mismo punto de venta y líneas con comisión"
+                        title="Una autofactura por punto de venta; varias liquidaciones en la misma factura"
                         @click="abrirModalFacturaComisiones">
                         Factura por comisiones
                     </VBtn>
@@ -154,7 +154,7 @@
     <ConfirmDialog
         v-model="modalFacturaComisiones"
         color="primary"
-        text="Se creará una factura recibida por cada liquidación seleccionada (mismo punto de venta), con el importe de la comisión y el mismo número de documento que la liquidación. Las que no tengan comisión calculable se omitirán. ¿Continuar?"
+        text="Se agruparán las liquidaciones por punto de venta (proveedor) y se creará una autofactura por cada uno, con una línea por liquidación que tenga comisión calculable. El Nº de cada autofactura será el siguiente correlativo CO-N (misma serie que las liquidaciones). Las liquidaciones sin proveedor o sin comisión aplicable se omitirán. ¿Continuar?"
         @cancel="modalFacturaComisiones = false"
         @confirm="confirmarFacturaComisiones" />
 </template>
@@ -163,6 +163,13 @@
 import {localizePrice} from "@/components/Transformations";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
 import { itemPasaFiltroFecha } from "@/utils/filtroFechaLista.js";
+import {
+    borrarFiltroFechasLista,
+    escribirFiltroFechasLista,
+    leerFiltroFechasLista,
+} from "@/utils/persistenciaFiltroFechaLista.js";
+
+const LISTA_PERSIST_ID = "liquidaciones";
 
 export default {
     mixins: [gestorClienteMixin],
@@ -207,11 +214,37 @@ export default {
         };
     },
     created() {
+        this.restaurarFiltroFechasDesdeStorage();
         this.getLiquidaciones();
+    },
+    watch: {
+        fechaDesde() {
+            this.persistirFiltroFechas();
+        },
+        fechaHasta() {
+            this.persistirFiltroFechas();
+        },
     },
     methods: {
         localizePrice,
+        restaurarFiltroFechasDesdeStorage() {
+            const { desde, hasta } = leerFiltroFechasLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId
+            );
+            this.fechaDesde = desde;
+            this.fechaHasta = hasta;
+        },
+        persistirFiltroFechas() {
+            escribirFiltroFechasLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId,
+                this.fechaDesde,
+                this.fechaHasta
+            );
+        },
         limpiarFiltroFechas() {
+            borrarFiltroFechasLista(LISTA_PERSIST_ID, this.effectiveUserId);
             this.fechaDesde = null;
             this.fechaHasta = null;
         },
@@ -243,14 +276,6 @@ export default {
             if (!this.selected.length) {
                 return $toast.error("Seleccione al menos una liquidación");
             }
-            const provs = [
-                ...new Set(this.selected.map((s) => s.proveedor_id)),
-            ];
-            if (provs.length > 1) {
-                return $toast.error(
-                    "Todas las liquidaciones deben ser del mismo punto de venta"
-                );
-            }
             this.modalFacturaComisiones = true;
         },
         confirmarFacturaComisiones() {
@@ -275,8 +300,8 @@ export default {
                     }
                     $toast.sucs(
                         creadas.length === 1
-                            ? "Factura por comisiones creada"
-                            : `${creadas.length} facturas por comisiones creadas`
+                            ? "Autofactura por comisiones creada"
+                            : `${creadas.length} autofacturas creadas (una por punto de venta)`
                     );
                     this.selected = [];
                     if (creadas.length === 1) {
@@ -328,6 +353,7 @@ export default {
             // Limpiar la lista mientras se cargan los nuevos datos
             this.liquidaciones = [];
             this.selected = [];
+            this.restaurarFiltroFechasDesdeStorage();
             this.getLiquidaciones();
         },
     },

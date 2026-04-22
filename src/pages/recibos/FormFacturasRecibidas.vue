@@ -48,7 +48,23 @@
                         <VTextField
                             filled
                             v-model="facturaRec.nro_factura"
-                            label="Nro. de factura"></VTextField>
+                            label="Nº factura (CO-n)"
+                            hint="Formato CO-n (n crece según necesidad). Si lo deja vacío, se asignará el siguiente correlativo."
+                            persistent-hint></VTextField>
+                    </VCol>
+                </VRow>
+
+                <VRow
+                    dense
+                    class="mt-2">
+                    <VCol
+                        cols="12"
+                        md="4">
+                        <VCheckbox
+                            v-model="facturaRec.contabilizado"
+                            label="Contabilizado"
+                            hide-details
+                            density="compact" />
                     </VCol>
                 </VRow>
 
@@ -199,7 +215,7 @@
                                 >{{ item.iva }}%</template
                             >
                             <template v-slot:item.total="{item}"
-                                >{{ format_precio_autofactura(item.total) }}</template
+                                >{{ importeBaseLinea(item) }}</template
                             >
                             <template v-slot:item.action="{item}">
                                 <VIcon
@@ -355,6 +371,7 @@ export default {
                 servicios: [],
                 retencion_id: null,
                 nro_factura: null,
+                contabilizado: false,
             },
             servicio: {
                 id: null,
@@ -410,6 +427,7 @@ export default {
 
     created() {
         this.facturaRec.user_id = this.effectiveUserId;
+        this.getSiguienteNroCo();
         this.getProveedores();
         this.getRetenciones();
         this.getArrayIva();
@@ -418,6 +436,17 @@ export default {
 
     methods: {
         format_precio_autofactura,
+        importeBaseLinea(item) {
+            const c = parseFloat(item.cantidad);
+            const p = parseFloat(item.precio);
+            const d = parseFloat(item.dcto) || 0;
+            if (Number.isNaN(c) || Number.isNaN(p)) {
+                return "";
+            }
+            const bruto = c * p;
+            const base = bruto * (1 - d / 100);
+            return this.format_precio_autofactura(base);
+        },
         formatCantidadFactura(val) {
             const n = Number(val);
             if (Number.isNaN(n)) {
@@ -429,6 +458,18 @@ export default {
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 4,
                   });
+        },
+        getSiguienteNroCo() {
+            axios
+                .get(`api/facturas-recibidas-siguiente-co`)
+                .then((res) => {
+                    if (res.data?.nro) {
+                        this.facturaRec.nro_factura = res.data.nro;
+                    }
+                })
+                .catch(() => {
+                    this.facturaRec.nro_factura = "CO-1";
+                });
         },
         getServicios() {
             axios
@@ -478,10 +519,18 @@ export default {
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
             formData.append("retencion_id", this.facturaRec.retencion_id);
             formData.append("total", this.total);
-            formData.append("nro_factura", this.facturaRec.nro_factura);
+            const nroTrim = (this.facturaRec.nro_factura ?? "").toString().trim();
+            formData.append(
+                "nro_factura",
+                nroTrim === "" ? "" : this.facturaRec.nro_factura
+            );
             formData.append(
                 "servicios",
                 JSON.stringify(this.facturaRec.servicios)
+            );
+            formData.append(
+                "contabilizado",
+                this.facturaRec.contabilizado ? "1" : "0"
             );
 
             axios

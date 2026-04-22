@@ -178,7 +178,7 @@
                         ¿Enviar nueva contraseña por email a <strong>{{ itemToReset.name }}</strong> ({{ itemToReset.email }})?
                     </p>
                     <p class="text-caption text-medium-emphasis mt-2">
-                        Se generará una contraseña nueva y se enviará al correo del usuario. Aplica a perfiles Administrador, Gestor y Empleado.
+                        Se generará una contraseña nueva y se enviará al correo del usuario.
                     </p>
                 </VCardText>
                 <VCardActions>
@@ -259,11 +259,9 @@ export default {
         },
 
         getUsuarios() {
-            // Filtrar administradores (1), gestores (3) y empleados (4)
             axios
                 .get(`api/get-usuarios`, {
                     params: {
-                        role: [1, 3, 4],
                         itemsPerPage: this.options.itemsPerPage,
                         page: this.options.page,
                         search: this.search,
@@ -366,10 +364,9 @@ export default {
             const currentRole = storeUser?.role != null && storeUser.role !== 0
                 ? Number(storeUser.role)
                 : Number(localStorage.getItem('role') || 0);
-            if (currentRole !== 1) return false;
-            // Solo administrador (1) puede ver el icono; aplica a Administrador (1), Gestor (3) y Empleado (4). No Cliente (2).
+            if (![1, 2, 3, 4].includes(currentRole)) return false;
             const role = Number(item.role);
-            return role === 1 || role === 3 || role === 4;
+            return [1, 2, 3, 4].includes(role);
         },
     },
 

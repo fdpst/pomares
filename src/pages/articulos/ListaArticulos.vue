@@ -79,6 +79,16 @@
         </span>
       </template>
       <template v-slot:item.action="{ item }">
+        <VIcon
+          v-if="$route.meta.venta === 0"
+          small
+          class="mr-2"
+          color="primary"
+          title="Historial de precio"
+          @click="openLogPrecio(item)"
+        >
+          ri-history-line
+        </VIcon>
         <VIcon small class="mr-2" color="grey-600" @click="openFormArticulo(item)">
             ri-pencil-line
           </VIcon>
@@ -171,6 +181,70 @@
     @cancel="closeModal"
     @confirm="deleteArticulo"
   />
+
+  <VDialog v-model="dialogPrecioLog" max-width="780" scrollable>
+    <VCard>
+      <VCardTitle class="d-flex flex-wrap align-center justify-space-between gap-2">
+        <span class="text-h6">Cambios de precio</span>
+        <VBtn icon variant="text" density="comfortable" @click="dialogPrecioLog = false">
+          <VIcon>ri-close-line</VIcon>
+        </VBtn>
+      </VCardTitle>
+      <VCardSubtitle v-if="logPrecioDescripcion" class="pb-0 text-wrap">
+        {{ logPrecioDescripcion }}
+      </VCardSubtitle>
+      <VCardText class="text-body-2 text-medium-emphasis pt-2 pb-0">
+        El precio sustituido se muestra como vigente <strong>hasta el día anterior</strong> al cambio;
+        el precio aplicado, <strong>desde el día del cambio</strong>. Si no hubo otro cambio después, el precio nuevo <strong>sigue vigente</strong>.
+      </VCardText>
+      <VCardText class="pt-4">
+        <div v-if="loadingLogPrecio" class="text-center py-6 text-medium-emphasis">
+          Cargando…
+        </div>
+        <template v-else-if="logPrecioItems.length">
+          <VTable density="compact" class="border rounded">
+            <thead>
+              <tr>
+                <th class="text-start">Cambio registrado</th>
+                <th class="text-start">Precio anterior</th>
+                <th class="text-start">Precio nuevo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, idx) in logPrecioItems" :key="idx">
+                <td class="text-nowrap align-top">{{ formatFechaHoraPrecio(row.created_at) }}</td>
+                <td class="align-top">
+                  <div class="font-weight-medium text-end text-sm-start">
+                    {{ formatPriceServicios(row.precio_anterior) }}€
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    Vigente hasta el {{ row.vigenciaAnteriorHasta }}
+                  </div>
+                </td>
+                <td class="align-top">
+                  <div class="font-weight-medium text-end text-sm-start">
+                    {{ formatPriceServicios(row.precio_nuevo) }}€
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    Vigente desde el {{ row.vigenciaNuevoDesde }}
+                    <template v-if="row.vigenciaNuevoHasta">
+                      · hasta el {{ row.vigenciaNuevoHasta }}
+                    </template>
+                    <template v-else>
+                      · <span class="text-high-emphasis">sigue vigente</span>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+        </template>
+        <p v-else class="text-medium-emphasis mb-0">
+          No hay cambios de precio registrados (solo se guardan al modificar el precio de un producto existente).
+        </p>
+      </VCardText>
+    </VCard>
+  </VDialog>
 </template>
 
 <script>
@@ -190,6 +264,10 @@ export default {
       isFormArticuloVisible: false,
       selectedItemId: null,
       modalEliminar: false,
+      dialogPrecioLog: false,
+      loadingLogPrecio: false,
+      logPrecioItems: [],
+      logPrecioDescripcion: "",
       item: "",
       search: "",
       fechaDesde: null,
@@ -343,6 +421,77 @@ export default {
     closeFormArticulo() {
       this.isFormArticuloVisible = false;
       this.selectedItemId = null;
+    },
+    openLogPrecio(item) {
+      this.logPrecioDescripcion = item.descripcion || `N.º ${item.nro ?? item.id}`;
+      this.loadingLogPrecio = true;
+      this.logPrecioItems = [];
+      this.dialogPrecioLog = true;
+      axios
+        .get(`api/servicio-precio-cambios/${item.id}`)
+        .then((res) => {
+          const raw = Array.isArray(res.data) ? res.data : [];
+          this.logPrecioItems = this.enriquecerVigenciasPrecioLog(raw);
+        })
+        .catch(() => {
+          $toast.error("No se pudo cargar el historial de precios");
+          this.dialogPrecioLog = false;
+        })
+        .finally(() => {
+          this.loadingLogPrecio = false;
+        });
+    },
+    /** Fecha calendario local en formato dd/mm/aaaa */
+    fechaCalendarioDMY(iso) {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    },
+    /** Día calendario anterior al de `iso` (precio anterior “hasta” ese día). */
+    diaAnteriorCalendarioDMY(iso) {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() - 1);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    },
+    /**
+     * API: más reciente primero. Precio nuevo vigente desde el día del cambio;
+     * hasta el día anterior al siguiente cambio, o “sigue vigente” si es el último.
+     */
+    enriquecerVigenciasPrecioLog(raw) {
+      return raw.map((r, i) => {
+        const vigenciaAnteriorHasta = this.diaAnteriorCalendarioDMY(r.created_at);
+        const vigenciaNuevoDesde = this.fechaCalendarioDMY(r.created_at);
+        let vigenciaNuevoHasta = null;
+        if (i > 0) {
+          vigenciaNuevoHasta = this.diaAnteriorCalendarioDMY(raw[i - 1].created_at);
+        }
+        return {
+          ...r,
+          vigenciaAnteriorHasta,
+          vigenciaNuevoDesde,
+          vigenciaNuevoHasta,
+        };
+      });
+    },
+    formatFechaHoraPrecio(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     },
     formatPriceServicios(value) {
       if (value == null || value === "" || isNaN(Number(value))) return "";

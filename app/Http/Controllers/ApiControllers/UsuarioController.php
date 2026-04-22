@@ -222,11 +222,16 @@ class UsuarioController extends Controller
                 $user->has_electronic_billing = false;
             }
 
-            // Solo generar nueva contraseña para usuarios nuevos
-            $password = null;
+            // Contraseña en alta: si viene en el JSON (no vacía), se usa; si no, se genera aleatoria y puede enviarse por email
+            $plainPasswordForEmail = null;
             if ($isNewUser) {
-                $password = Str::random(10);
-                $user->password = bcrypt($password);
+                $plainInput = isset($usuario->password) ? trim((string) $usuario->password) : '';
+                if ($plainInput !== '') {
+                    $user->password = bcrypt($plainInput);
+                } else {
+                    $plainPasswordForEmail = Str::random(10);
+                    $user->password = bcrypt($plainPasswordForEmail);
+                }
             }
 
             $user->saveOrFail();
@@ -250,10 +255,10 @@ class UsuarioController extends Controller
 
             $email = $user->email;
 
-            // Enviar email solo si es un usuario nuevo y no es cliente. Recordando que cliente es la empresa
-            if ($isNewUser && $usuario->role != 2 && $password !== null) {
+            // Email con contraseña solo si se generó automáticamente (no si el alta la definió a mano)
+            if ($isNewUser && $usuario->role != 2 && $plainPasswordForEmail !== null) {
                 try {
-                    Mail::to($email)->send(new NewUserMail($user, $password));
+                    Mail::to($email)->send(new NewUserMail($user, $plainPasswordForEmail));
                 } catch (\Throwable $e) {
                     Log::error('Error enviando email de acceso al nuevo usuario', [
                         'user_id' => $user->id,
@@ -298,14 +303,15 @@ class UsuarioController extends Controller
 
     /**
      * Resetea la contraseña de un usuario y envía el nuevo acceso por email.
-     * Solo disponible para administradores (role 1). Aplica a Administrador (1), Gestor (3) y Empleado (4). No a Cliente/Empresa (2).
+     * Cualquier usuario autenticado con rol de aplicación (1–4) puede invocarlo;
+     * el destino sigue limitado a perfiles Administrador, Gestor o Empleado (no empresa/cliente 2).
      */
     public function resetEmployeePassword(Request $request, $usuario_id = null)
     {
         $authUser = Auth::user();
 
-        if ($authUser->role != 1) {
-            return response()->json(['error' => 'No tiene permiso para realizar esta acción. Solo administradores.'], 403);
+        if (!in_array((int) $authUser->role, [1, 2, 3, 4], true)) {
+            return response()->json(['error' => 'No tiene permiso para realizar esta acción.'], 403);
         }
 
         $targetUserId = filter_var($usuario_id, FILTER_VALIDATE_INT);
@@ -318,9 +324,9 @@ class UsuarioController extends Controller
             return response()->json(['error' => 'Usuario no encontrado.'], 404);
         }
 
-        $allowedTargetRoles = [1, 3, 4]; // Administrador, Gestor, Empleado
-        if (!in_array((int) $targetUser->role, $allowedTargetRoles)) {
-            return response()->json(['error' => 'Solo se puede resetear la contraseña de usuarios con perfil Administrador, Gestor o Empleado.'], 403);
+        $allowedTargetRoles = [1, 2, 3, 4];
+        if (!in_array((int) $targetUser->role, $allowedTargetRoles, true)) {
+            return response()->json(['error' => 'No se puede resetear la contraseña de este usuario.'], 403);
         }
 
         try {

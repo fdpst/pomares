@@ -7,7 +7,9 @@
         <VCardText>
             <VForm ref="formValid" v-model="formValid">
                 <!-- avatar -->
-                <VRow v-if="usuario.role == 2 || !usuario.role" dense>
+                <VRow
+                    v-if="type === 'usuario' || usuario.role == 2 || !usuario.role"
+                    dense>
                     <VCol cols="12" align="center">
                         <VAvatar
                             size="120px"
@@ -74,6 +76,112 @@
                     </VCol>
                 </VRow>
 
+                <template v-if="type === 'usuario'">
+                    <VRow dense>
+                        <VCol cols="12" md="6">
+                            <VTextField
+                                density="compact"
+                                variant="outlined"
+                                :error-messages="
+                                    errors.errors.name
+                                        ? errors.errors.name[0]
+                                        : null
+                                "
+                                v-model="usuario.name"
+                                label="Nombre"
+                                placeholder="Nombre"
+                                :rules="[rules.required]"
+                            />
+                        </VCol>
+                        <VCol cols="12" md="6">
+                            <VTextField
+                                density="compact"
+                                variant="outlined"
+                                :error-messages="
+                                    errors.errors.email
+                                        ? errors.errors.email[0]
+                                        : null
+                                "
+                                v-model="usuario.email"
+                                label="Email"
+                                placeholder="Email"
+                                :rules="[rules.required, rules.email]"
+                            />
+                        </VCol>
+                    </VRow>
+                    <VRow
+                        v-if="!editMode"
+                        dense
+                        class="mt-2">
+                        <VCol cols="12" md="6">
+                            <VTextField
+                                density="compact"
+                                variant="outlined"
+                                v-model="usuario.password"
+                                type="password"
+                                autocomplete="new-password"
+                                label="Contraseña"
+                                :rules="[rules.required, rules.password]"
+                            />
+                        </VCol>
+                        <VCol cols="12" md="6">
+                            <VTextField
+                                density="compact"
+                                variant="outlined"
+                                v-model="passwordConfirm"
+                                type="password"
+                                autocomplete="new-password"
+                                label="Confirmar contraseña"
+                                :rules="[
+                                    rules.required,
+                                    (v) =>
+                                        confirmedValidator(v, usuario.password),
+                                ]"
+                            />
+                        </VCol>
+                    </VRow>
+                    <VRow
+                        dense
+                        :class="editMode ? 'mt-4' : 'mt-2'">
+                        <VCol cols="12" align="center">
+                            <VBtn
+                                v-if="editMode == false"
+                                @click="saveUsuario"
+                                :disabled="isloading"
+                                class="me-3"
+                                >Confirmar
+                            </VBtn>
+
+                            <VBtn
+                                v-if="editMode == true"
+                                @click="updateUsuario"
+                                :disabled="isloading"
+                                class="me-3"
+                                >Actualizar</VBtn
+                            >
+
+                            <VBtn
+                                v-if="editMode && canResetEmployeePassword"
+                                @click="openDialogResetPassword"
+                                :disabled="isloading"
+                                color="info"
+                                variant="tonal"
+                                class="me-3"
+                            >
+                                Restablecer contraseña y enviar email
+                            </VBtn>
+
+                            <VBtn
+                                @click="close"
+                                :disabled="isloading"
+                                color="secondary"
+                                >Cancelar</VBtn
+                            >
+                        </VCol>
+                    </VRow>
+                </template>
+
+                <template v-else>
                 <VRow>
                     <VCol cols="12" md="4">
                         <VTextField
@@ -349,6 +457,7 @@
                         >
                     </VCol>
                 </VRow>
+                </template>
             </VForm>
         </VCardText>
         <VDialog v-model="dialogResetPassword" max-width="450" persistent>
@@ -358,7 +467,7 @@
                         ¿Enviar nueva contraseña por email a <strong>{{ usuario.name }}</strong> ({{ usuario.email }})?
                     </p>
                     <p class="text-caption text-medium-emphasis mt-2">
-                        Se generará una contraseña nueva y se enviará al correo del usuario. Aplica a perfiles Administrador, Gestor y Empleado.
+                        Se generará una contraseña nueva y se enviará al correo del usuario.
                     </p>
                 </VCardText>
                 <VCardActions>
@@ -374,7 +483,12 @@
 <script>
 import FileInput from "@/components/FileInput.vue";
 import { UploadFilesService } from "@/utils/UploadFilesService";
-import { emailValidator, requiredValidator } from "@core/utils/validators";
+import {
+    confirmedValidator,
+    emailValidator,
+    passwordValidator,
+    requiredValidator,
+} from "@core/utils/validators";
 export default {
     props: ["value", "type"],
 
@@ -387,8 +501,10 @@ export default {
             rules: {
                 required: requiredValidator,
                 email: emailValidator,
+                password: passwordValidator,
                 number_rule: (value) => /^\d+$/.test(value) || "Campo numérico",
             },
+            passwordConfirm: "",
             formValid: true,
             editMode: false,
             usuario: {
@@ -486,14 +602,13 @@ export default {
                         this.usuario.clientes_ids = [];
                     }
 
-                    // Debug: verificar que los datos llegaron
-                    if (this.usuario.role == 3 || this.usuario.role == 4) {
-                        console.log(
-                            "Cliente IDs recibidos:",
-                            this.usuario.clientes_ids
-                        );
-                        console.log("Clientes disponibles:", this.clientes);
+                    if (this.type === "usuario") {
+                        this.usuario.role = 1;
+                        this.usuario.gestores_ids = [];
+                        this.usuario.clientes_ids = [];
                     }
+                    this.usuario.password = "";
+                    this.passwordConfirm = "";
                 } else {
                     this.editMode = false;
                     this.clearForm();
@@ -632,6 +747,12 @@ export default {
                 return;
             }
 
+            if (this.type === "usuario") {
+                this.usuario.role = 1;
+                this.usuario.gestores_ids = [];
+                this.usuario.clientes_ids = [];
+            }
+
             let formDataUpdate = new FormData();
 
             for (let fileSave of this.files) {
@@ -656,6 +777,12 @@ export default {
         saveUsuario() {
             this.$refs.formValid.validate();
             if (this.formValid) {
+                if (this.type === "usuario") {
+                    this.usuario.role = 1;
+                    this.usuario.gestores_ids = [];
+                    this.usuario.clientes_ids = [];
+                }
+
                 let formDataSave = new FormData();
 
                 for (let fileSave of this.files) {
@@ -691,6 +818,8 @@ export default {
                     if (!this.usuario.clientes_ids) {
                         this.usuario.clientes_ids = [];
                     }
+                    this.usuario.password = "";
+                    this.passwordConfirm = "";
                 },
                 (res) => {
                     $toast.error("Error consultando Usuario");
@@ -715,7 +844,7 @@ export default {
                 email: "",
                 email_comercial: "",
                 password: "",
-                role: null,
+                role: this.type === "usuario" ? 1 : null,
                 direccion: "",
                 avatar: "",
                 cuenta: "00000000000000000000",
@@ -723,6 +852,7 @@ export default {
                 gestores_ids: [],
                 clientes_ids: [],
             };
+            this.passwordConfirm = "";
         },
 
         openDialogResetPassword() {
@@ -779,10 +909,9 @@ export default {
             const currentRole = storeUser?.role != null && storeUser.role !== 0
                 ? Number(storeUser.role)
                 : Number(localStorage.getItem('role') || 0);
-            if (currentRole !== 1) return false;
-            // Solo administrador (1); botón visible al editar Administrador (1), Gestor (3) o Empleado (4). No Cliente (2).
+            if (![1, 2, 3, 4].includes(currentRole)) return false;
             const role = Number(this.usuario.role);
-            return role === 1 || role === 3 || role === 4;
+            return [1, 2, 3, 4].includes(role);
         },
     },
 };

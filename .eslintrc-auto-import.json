@@ -387,6 +387,9 @@
     "format_precio_autofactura": true,
     "itemPasaFiltroFecha": true,
     "normalizarFechaItem": true,
-    "normalizarValorFiltroFecha": true
+    "normalizarValorFiltroFecha": true,
+    "borrarFiltroFechasLista": true,
+    "escribirFiltroFechasLista": true,
+    "leerFiltroFechasLista": true
   }
 }

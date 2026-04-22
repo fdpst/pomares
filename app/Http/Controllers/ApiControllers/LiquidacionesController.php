@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\ApiControllers;
 
+use App\Helpers\CorrelativoCo;
 use App\Helpers\GestorHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LiquidacionRequest;
@@ -10,9 +11,11 @@ use App\Models\FacturaRecibidaItems;
 use App\Models\Liquidacion;
 use App\Models\LiquidacionItem;
 use App\Models\ProveedorComision;
+use App\Services\ResumenLiquidacionPdfService;
 use App\Traits\Files\HandlerFiles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class LiquidacionesController extends Controller
@@ -203,7 +206,7 @@ class LiquidacionesController extends Controller
     }
 
     /**
-     * Siguiente número de liquidación para el usuario (formato CO-N, N entero sin límite).
+     * Siguiente CO-N para liquidaciones (misma serie que autofacturas / facturas recibidas del usuario).
      */
     public function siguienteNumero(Request $request)
     {
@@ -220,18 +223,7 @@ class LiquidacionesController extends Controller
 
     private function generarSiguienteNroLiquidacion(int $userId): string
     {
-        $max = 0;
-        $rows = Liquidacion::where('user_id', $userId)
-            ->whereNotNull('nro_factura')
-            ->pluck('nro_factura');
-
-        foreach ($rows as $nro) {
-            if (preg_match('/^CO-(\d+)$/i', trim((string) $nro), $m)) {
-                $max = max($max, (int) $m[1]);
-            }
-        }
-
-        return 'CO-' . ($max + 1);
+        return CorrelativoCo::siguiente($userId);
     }
 
     public function duplicarLiquidacion(Request $request)
@@ -281,9 +273,10 @@ class LiquidacionesController extends Controller
     }
 
     /**
-     * Crea una factura recibida por cada liquidación seleccionada (mismo punto de venta).
-     * Cada factura tiene una sola línea (comisión de esa liquidación).
-     * El nro_factura de cada factura coincide con el almacenado en la liquidación (misma nomenclatura).
+     * Crea una factura recibida (autofactura) por cada punto de venta (proveedor):
+     * agrupa las liquidaciones seleccionadas por proveedor_id y, en cada factura,
+     * una línea por liquidación con comisión calculable.
+     * Cada autofactura recibe el siguiente Nº correlativo CO-N (serie común con liquidaciones del usuario).
      */
     public function crearFacturaComisiones(Request $request)
     {
@@ -315,55 +308,149 @@ class LiquidacionesController extends Controller
             return response()->json(['error' => 'Alguna liquidación no existe o no pertenece a su cuenta.'], 404);
         }
 
-        $proveedorIds = $liquidaciones->pluck('proveedor_id')->unique()->filter();
-        if ($proveedorIds->count() !== 1) {
-            return response()->json([
-                'error' => 'Todas las liquidaciones seleccionadas deben ser del mismo punto de venta.',
-            ], 422);
-        }
-
         $omitidas = [];
         $facturasCreadas = [];
 
         try {
             DB::beginTransaction();
 
-            foreach ($liquidaciones as $liq) {
-                $desglose = $this->desgloseComisionLiquidacion($liq, $effectiveUserId);
-                if ($desglose === null) {
-                    $omitidas[] = [
-                        'liquidacion_id' => $liq->id,
-                        'motivo' => 'Sin comisión calculable para esta liquidación',
-                    ];
+            $porProveedor = $liquidaciones->groupBy(function (Liquidacion $liq) {
+                return $liq->proveedor_id !== null && $liq->proveedor_id !== ''
+                    ? (int) $liq->proveedor_id
+                    : 0;
+            });
+
+            foreach ($porProveedor as $proveedorId => $liqsGrupo) {
+                if ($proveedorId === 0) {
+                    foreach ($liqsGrupo as $liq) {
+                        $omitidas[] = [
+                            'liquidacion_id' => $liq->id,
+                            'motivo' => 'Liquidación sin punto de venta (proveedor)',
+                        ];
+                    }
 
                     continue;
                 }
 
-                $etiqueta = $this->etiquetaNroLiquidacion($liq);
-                $concepto = 'Comisión por liquidación ' . $etiqueta;
-                $nroFactura = $this->nroFacturaDesdeLiquidacion($liq);
+                $lineas = [];
+                foreach ($liqsGrupo as $liq) {
+                    $desglose = $this->desgloseComisionLiquidacion($liq, $effectiveUserId);
+                    if ($desglose === null) {
+                        $omitidas[] = [
+                            'liquidacion_id' => $liq->id,
+                            'motivo' => 'Sin comisión calculable para esta liquidación',
+                        ];
+
+                        continue;
+                    }
+                    $etiqueta = $this->etiquetaNroLiquidacion($liq);
+                    $lineas[] = [
+                        'liquidacion' => $liq,
+                        'desglose' => $desglose,
+                        'etiqueta' => $etiqueta,
+                    ];
+                }
+
+                if ($lineas === []) {
+                    continue;
+                }
+
+                $totalFactura = 0.0;
+                foreach ($lineas as $ln) {
+                    $totalFactura += (float) $ln['desglose']['total'];
+                }
+                $totalFactura = round($totalFactura, 2);
+
+                $fechaFactura = now()->format('Y-m-d');
+                $codigoResumen = ResumenLiquidacionPdfService::siguienteCodigoResumen((int) $effectiveUserId, $fechaFactura);
+                $conceptoItem = 'Comisiones liquidación: ' . $codigoResumen;
+                $descripcionFactura = $conceptoItem;
+
+                $nroFactura = CorrelativoCo::siguiente($effectiveUserId);
 
                 $fr = FacturaRecibida::create([
                     'user_id' => $effectiveUserId,
-                    'proveedor_id' => (int) $liq->proveedor_id,
-                    'fecha' => now()->format('Y-m-d'),
+                    'proveedor_id' => $proveedorId,
+                    'fecha' => $fechaFactura,
                     'retencion_id' => null,
-                    'descripcion' => $concepto,
+                    'descripcion' => $descripcionFactura,
                     'nro_factura' => $nroFactura,
-                    'total' => round($desglose['total'], 2),
+                    'total' => $totalFactura,
                     'imagen' => null,
+                    'liquidacion_resumen_codigo' => $codigoResumen,
                 ]);
 
-                FacturaRecibidaItems::create([
-                    'factura_recibidas_id' => $fr->id,
-                    'concepto' => $concepto,
-                    'cantidad' => $desglose['cantidad'],
-                    'id_servicio' => 0,
-                    'precio' => $desglose['precio'],
-                    'dcto' => $desglose['dcto'],
-                    'iva' => $desglose['iva'],
-                    'total' => $desglose['total'],
-                ]);
+                $payloads = [];
+                foreach ($lineas as $ln) {
+                    $liq = $ln['liquidacion'];
+                    $liq->loadMissing('items');
+                    $cantArt = (float) $liq->items->sum(fn ($it) => (float) $it->cantidad);
+                    $d = $ln['desglose'];
+                    $ivaPct = (float) $d['iva'];
+                    $bruto = round((float) $d['total'], 2);
+                    $net = round($bruto / (1 + $ivaPct / 100), 4);
+                    $precioCom = round((float) $d['precio'], 4);
+                    $payloads[] = [
+                        'cantidad_art' => $cantArt,
+                        'precio_com' => $precioCom,
+                        'net' => $net,
+                        'bruto' => $bruto,
+                        'iva' => $ivaPct,
+                        'dcto' => (float) $d['dcto'],
+                    ];
+                }
+
+                $preciosUnicos = collect($payloads)->pluck('precio_com')->unique()->values();
+                if ($preciosUnicos->count() === 1) {
+                    $cantTot = round(array_sum(array_column($payloads, 'cantidad_art')), 4);
+                    $netTot = round(array_sum(array_column($payloads, 'net')), 2);
+                    $brutoTot = round(array_sum(array_column($payloads, 'bruto')), 2);
+                    $ivaUse = (float) $payloads[0]['iva'];
+                    $dctoUse = (float) $payloads[0]['dcto'];
+                    $precioUnit = $cantTot > 0.00001
+                        ? round($netTot / $cantTot, 4)
+                        : $payloads[0]['precio_com'];
+                    FacturaRecibidaItems::create([
+                        'factura_recibidas_id' => $fr->id,
+                        'concepto' => $conceptoItem,
+                        'cantidad' => $cantTot,
+                        'id_servicio' => 0,
+                        'precio' => $precioUnit,
+                        'dcto' => $dctoUse,
+                        'iva' => $ivaUse,
+                        'total' => $brutoTot,
+                    ]);
+                } else {
+                    foreach ($payloads as $row) {
+                        FacturaRecibidaItems::create([
+                            'factura_recibidas_id' => $fr->id,
+                            'concepto' => $conceptoItem,
+                            'cantidad' => $row['cantidad_art'],
+                            'id_servicio' => 0,
+                            'precio' => $row['precio_com'],
+                            'dcto' => $row['dcto'],
+                            'iva' => $row['iva'],
+                            'total' => $row['bruto'],
+                        ]);
+                    }
+                }
+
+                $idOrder = collect($lineas)->map(fn ($ln) => (int) $ln['liquidacion']->id)->unique()->values()->all();
+                $byId = Liquidacion::with(['items.servicio', 'proveedor'])
+                    ->where('user_id', $effectiveUserId)
+                    ->whereIn('id', $idOrder)
+                    ->get()
+                    ->keyBy('id');
+                $liqsOrdered = collect($idOrder)->map(fn ($id) => $byId->get($id))->filter();
+
+                try {
+                    ResumenLiquidacionPdfService::generarYAdjuntar($fr, $liqsOrdered, (int) $effectiveUserId);
+                } catch (\Throwable $e) {
+                    Log::warning('resumen_liquidacion_pdf', [
+                        'factura_recibida_id' => $fr->id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
 
                 $facturasCreadas[] = $fr->fresh(['items']);
             }
@@ -372,7 +459,7 @@ class LiquidacionesController extends Controller
                 DB::rollBack();
 
                 return response()->json([
-                    'error' => 'Ninguna de las liquidaciones seleccionadas tiene comisión calculable (productos con comisión en el punto de venta).',
+                    'error' => 'Ninguna liquidación con punto de venta tiene comisión calculable (productos con comisión en el punto de venta).',
                     'omitidas' => $omitidas,
                 ], 422);
             }
@@ -388,23 +475,6 @@ class LiquidacionesController extends Controller
 
             return response()->json(['error' => $e->getMessage()], 400);
         }
-    }
-
-    /**
-     * Número de factura idéntico al guardado en la liquidación (trim; vacío o "null" → null).
-     */
-    private function nroFacturaDesdeLiquidacion(Liquidacion $liq): ?string
-    {
-        $raw = $liq->nro_factura;
-        if ($raw === null) {
-            return null;
-        }
-        $s = trim((string) $raw);
-        if ($s === '' || strcasecmp($s, 'null') === 0) {
-            return null;
-        }
-
-        return $s;
     }
 
     /** Texto para conceptos cuando falta nro en liquidación */

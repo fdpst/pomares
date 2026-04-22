@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ApiControllers;
 
 use App\Models\Servicio;
+use App\Models\ServicioPrecioCambio;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -89,6 +90,34 @@ class ServicioController extends Controller
     return response()->json($servicio, 200);
   }
 
+  /**
+   * Historial de cambios de precio (solo productos, venta = 0).
+   */
+  public function getServicioPrecioCambios(Request $request, $servicio_id)
+  {
+    $effectiveUserId = GestorHelper::getUserId($request);
+
+    if (!$effectiveUserId) {
+      return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+    }
+
+    $servicio = Servicio::where('id', (int) $servicio_id)
+      ->where('user_id', $effectiveUserId)
+      ->where('venta', 0)
+      ->first();
+
+    if (!$servicio) {
+      return response()->json(['error' => 'Producto no encontrado'], 404);
+    }
+
+    $rows = ServicioPrecioCambio::where('servicio_id', $servicio->id)
+      ->where('user_id', $effectiveUserId)
+      ->orderByDesc('id')
+      ->get(['precio_anterior', 'precio_nuevo', 'created_at']);
+
+    return response()->json($rows, 200);
+  }
+
   public function saveServicio(Request $request)
   {
     $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
@@ -97,15 +126,35 @@ class ServicioController extends Controller
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
 
+    $nuevoPrecio = $this->parseHelper->parseEuroNumber($request->precio);
+    $venta = (int) $request->venta;
+
+    $existente = null;
+    $idRaw = $request->input('id');
+    if ($idRaw !== null && $idRaw !== '' && $idRaw !== 'null') {
+      $existente = Servicio::where('id', $idRaw)
+        ->where('user_id', $effectiveUserId)
+        ->first();
+    }
+
     $servicio = Servicio::updateOrCreate(['id' => $request->id], [
       'nro' => $request->nro,
       'descripcion' => $request->descripcion,
-      'precio' => $this->parseHelper->parseEuroNumber($request->precio),
+      'precio' => $nuevoPrecio,
       'iva_percent' => $request->iva_percent !== null ? floatval($request->iva_percent) : 0,
       'venta' => $request->venta,
       'user_id' => $effectiveUserId,
       'iva_id' => $request->iva_id ?? null,
     ]);
+
+    if ($venta === 0 && $existente !== null && $this->precioServicioHaCambiado((float) ($existente->precio ?? 0), (float) $nuevoPrecio)) {
+      ServicioPrecioCambio::create([
+        'servicio_id' => (int) $servicio->id,
+        'user_id' => (int) $effectiveUserId,
+        'precio_anterior' => (float) ($existente->precio ?? 0),
+        'precio_nuevo' => (float) $nuevoPrecio,
+      ]);
+    }
     if ($request->cuenta_contable) {
       $cuenta_contable = $this->crearCuentaContable($request->cuenta_contable, $servicio);
       $servicio->id_cuenta_contable = $cuenta_contable->id;
@@ -121,6 +170,11 @@ class ServicioController extends Controller
     return response()->json($servicio, 200);
   }
 
+
+  private function precioServicioHaCambiado(float $anterior, float $nuevo): bool
+  {
+    return round($anterior, 4) !== round($nuevo, 4);
+  }
 
   private function crearCuentaContable($cuenta_contable, $servicio)
   {

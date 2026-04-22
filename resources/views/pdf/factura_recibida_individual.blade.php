@@ -241,17 +241,23 @@
                 <th>Cantidad</th>
                 <th>Precio</th>
                 <th>IVA %</th>
-                <th>Total</th>
+                <th>Importe</th>
             </tr>
         </thead>
         <tbody>
             @foreach($items as $item)
+            @php
+                $c = (float) ($item->cantidad ?? 0);
+                $p = (float) ($item->precio ?? 0);
+                $d = (float) ($item->dcto ?? 0);
+                $importeBase = $c * $p * (1 - $d / 100);
+            @endphp
             <tr>
                 <td>{{ $item->concepto ?? '-' }}</td>
                 <td>{{ $item->cantidad ?? 0 }}</td>
                 <td>{{ number_format($item->precio ?? 0, 2, ',', '.') }} €</td>
                 <td>{{ number_format($item->iva ?? 0, 0) }}%</td>
-                <td>{{ number_format($item->total ?? 0, 2, ',', '.') }} €</td>
+                <td>{{ number_format($importeBase, 2, ',', '.') }} €</td>
             </tr>
             @endforeach
         </tbody>

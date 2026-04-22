@@ -89,14 +89,21 @@
                     {{ format_precio_autofactura(item.total) }}
                 </span>
             </template>
+            <template v-slot:item.contabilizado="{item}">
+                <VCheckbox
+                    density="compact"
+                    hide-details
+                    class="mt-0"
+                    :model-value="contabilizadoBool(item)"
+                    @update:model-value="(v) => setContabilizado(item, v)" />
+            </template>
             <template v-slot:item.action="{item}">
                 <RouterLink
                     :to="'/form-facturas-recibidas-update/' + item.id"
                     class="action-buttons">
                     <VIcon
                         small
-                        class="mr-2"
-                        color="grey-600">
+                        class="mr-2">
                         ri-pencil-line
                     </VIcon>
                 </RouterLink>
@@ -105,26 +112,27 @@
                     @click="mostrarModalEliminar(item)"
                     small
                     class="mr-2"
-                    color="red">
+                    color="error">
                     ri-delete-bin-line
-                </VIcon>
-
-                <VIcon
-                    @click="mostrarModalDuplicar(item)"
-                    small
-                    class="mr-2"
-                    color="orange"
-                    title="Duplicar autofactura">
-                    mdi mdi-content-duplicate
                 </VIcon>
 
                 <VIcon
                     @click="verPdfAutofactura(item)"
                     small
                     class="mr-2"
-                    color="primary"
+                    color="info"
                     title="Ver PDF">
                     ri-file-pdf-line
+                </VIcon>
+
+                <VIcon
+                    v-if="item.resumen_liquidacion"
+                    @click="verPdfResumenLiquidacion(item)"
+                    small
+                    class="mr-2"
+                    color="teal-darken-2"
+                    title="Resumen de liquidación (PDF)">
+                    ri-file-list-3-line
                 </VIcon>
             </template>
         </VDataTable>
@@ -136,16 +144,6 @@
         @confirm="deleteFac"
         color="primary" />
 
-    <ConfirmDialog
-        v-model="modalDuplicar"
-        color="info"
-        text="¿Está seguro de que desea crear una nueva autofactura con los datos de la seleccionada?"
-        @cancel="modalDuplicar = false"
-        @confirm="
-            () => {
-                $router.push('/form-facturas-recibidas-update/' + item.id);
-            }
-        " />
 </template>
 
 <script>
@@ -153,13 +151,19 @@ import {localizePrice} from "@/components/Transformations";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
 import { format_precio_autofactura } from "@/utils/format_precio.js";
 import { itemPasaFiltroFecha } from "@/utils/filtroFechaLista.js";
+import {
+    borrarFiltroFechasLista,
+    escribirFiltroFechasLista,
+    leerFiltroFechasLista,
+} from "@/utils/persistenciaFiltroFechaLista.js";
+
+const LISTA_PERSIST_ID = "facturas-recibidas";
 
 export default {
     mixins: [gestorClienteMixin],
     data() {
         return {
             modalEliminar: false,
-            modalDuplicar: false,
             item: "",
             search: "",
             fechaDesde: null,
@@ -187,6 +191,12 @@ export default {
                     value: "total",
                 },
                 {
+                    title: "Contabilizado",
+                    value: "contabilizado",
+                    sortable: true,
+                    width: "9rem",
+                },
+                {
                     title: "Acciones",
                     value: "action",
                     sortable: false,
@@ -195,11 +205,36 @@ export default {
         };
     },
     created() {
+        this.restaurarFiltroFechasDesdeStorage();
         this.getFactRecibidas();
+    },
+    watch: {
+        fechaDesde() {
+            this.persistirFiltroFechas();
+        },
+        fechaHasta() {
+            this.persistirFiltroFechas();
+        },
     },
     methods: {
         localizePrice,
         format_precio_autofactura,
+        restaurarFiltroFechasDesdeStorage() {
+            const { desde, hasta } = leerFiltroFechasLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId
+            );
+            this.fechaDesde = desde;
+            this.fechaHasta = hasta;
+        },
+        persistirFiltroFechas() {
+            escribirFiltroFechasLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId,
+                this.fechaDesde,
+                this.fechaHasta
+            );
+        },
         getFactRecibidas() {
             axios
                 .get(`api/facturas-recibidas`)
@@ -217,17 +252,54 @@ export default {
             this.modalEliminar = true;
             this.item = item;
         },
-        mostrarModalDuplicar(item) {
-            this.modalDuplicar = true;
-            this.item = item;
-        },
         closeModal() {
             this.modalEliminar = false;
             this.item = "";
         },
         limpiarFiltroFechas() {
+            borrarFiltroFechasLista(LISTA_PERSIST_ID, this.effectiveUserId);
             this.fechaDesde = null;
             this.fechaHasta = null;
+        },
+        contabilizadoBool(item) {
+            const c = item?.contabilizado;
+            return (
+                c === true ||
+                c === 1 ||
+                c === "1" ||
+                c === "true"
+            );
+        },
+        setContabilizado(item, value) {
+            const prev = this.contabilizadoBool(item);
+            const next = !!value;
+            item.contabilizado = next;
+            const payload = {
+                contabilizado: next,
+                user_id: this.effectiveUserId,
+            };
+            const role = parseInt(localStorage.getItem("role"), 10);
+            const selectedCliente = localStorage.getItem(
+                "selected_cliente_id"
+            );
+            if (role === 3 && selectedCliente) {
+                payload.cliente_id = selectedCliente;
+            }
+            axios
+                .post(
+                    `api/facturas-recibidas-contabilizado/${item.id}`,
+                    payload
+                )
+                .then((res) => {
+                    const fr = res.data?.facturaRecibida;
+                    if (fr) {
+                        item.contabilizado = !!fr.contabilizado;
+                    }
+                })
+                .catch(() => {
+                    item.contabilizado = prev;
+                    $toast.error("No se pudo actualizar contabilizado");
+                });
         },
         verPdfAutofactura(item) {
             axios
@@ -275,6 +347,53 @@ export default {
                     $toast.error("Error al generar PDF");
                 });
         },
+        verPdfResumenLiquidacion(item) {
+            if (!item?.id || !item.resumen_liquidacion) {
+                return;
+            }
+            axios
+                .get(
+                    `api/facturas-recibidas-resumen-liquidacion-pdf/${item.id}`,
+                    {
+                        params: {
+                            user_id: this.effectiveUserId,
+                            _t: Date.now(),
+                        },
+                        responseType: "blob",
+                    }
+                )
+                .then((response) => {
+                    const blob = response.data;
+                    if (blob.type === "application/json") {
+                        blob.text().then((t) => {
+                            try {
+                                const j = JSON.parse(t);
+                                $toast.error(
+                                    j.error ||
+                                        j.message ||
+                                        "Resumen no disponible"
+                                );
+                            } catch {
+                                $toast.error("Resumen no disponible");
+                            }
+                        });
+                        return;
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const win = window.open(url, "_blank", "noopener,noreferrer");
+                    if (!win) {
+                        URL.revokeObjectURL(url);
+                        $toast.error(
+                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                        );
+                        return;
+                    }
+                    setTimeout(() => URL.revokeObjectURL(url), 120000);
+                })
+                .catch(() => {
+                    $toast.error("Error al abrir el resumen de liquidación");
+                });
+        },
         deleteFac(item) {
             this.modalEliminar = false;
             axios.post(`api/facturas-recibidas-delete/${this.item.id}`).then(
@@ -308,6 +427,7 @@ export default {
             console.log('ListaFacturasRecibidas: Cliente cambiado, recargando facturas recibidas...', event.detail);
             // Limpiar la lista mientras se cargan los nuevos datos
             this.facturaRecibidas = [];
+            this.restaurarFiltroFechasDesdeStorage();
             this.getFactRecibidas();
         },
     },

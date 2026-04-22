@@ -44,7 +44,9 @@
                         <VTextField
                             filled
                             v-model="facturaRec.nro_factura"
-                            label="Nro. de liquidación"></VTextField>
+                            label="Nº liquidación (CO-n)"
+                            hint="Correlativo CO-n. Serie común con autofacturas del mismo usuario."
+                            persistent-hint></VTextField>
                     </VCol>
                 </VRow>
 
@@ -308,7 +310,7 @@
                                     </div>
                                     <div
                                         class="text-caption liquidacion-resumen-subtitulo">
-                                        Subtotal, IVA artículos, comisiones deducidas e importe
+                                        Subtotal, IVA comisiones, comisiones deducidas e importe
                                     </div>
                                 </div>
                             </div>
@@ -326,7 +328,7 @@
                                     <div
                                         class="liquidacion-resumen-line text-body-1">
                                         <span class="text-medium-emphasis"
-                                            >IVA (según artículos)</span
+                                            >IVA por comisiones (21&nbsp;%)</span
                                         >
                                         <span class="font-weight-medium">{{
                                             format_precio(totalIva)
@@ -481,7 +483,7 @@
 import { formatPrice } from "@/@core/utils/formatters";
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
 
-/** El IVA del 21 % sobre comisiones solo se aplica al generar facturas recibidas (LiquidacionesController::desgloseComisionLiquidacion). */
+/** IVA 21 % sobre la base de comisiones: resumen del formulario y facturas recibidas (LiquidacionesController::desgloseComisionLiquidacion). */
 
 export default {
     components: {
@@ -913,25 +915,14 @@ export default {
                 return acc + total;
             }, 0);
 
-            let sumaIva = 0;
-            lista_servicios.forEach((element) => {
-                let subtotal = element.cantidad * element.precio;
-                let dcto = (subtotal * element.dcto) / 100;
-                subtotal = subtotal - dcto;
-                const artLine = this.servicios.find(
-                    (e) => e.id == element.id_servicio
-                );
-                const parsedLine = parseFloat(element.iva);
-                const ivaPct = Number.isFinite(parsedLine)
-                    ? parsedLine
-                    : this.resolverIvaArticulo(artLine);
-                sumaIva += (subtotal * ivaPct) / 100;
-            });
-
             const deduccionComisiones = this.totalDeduccionComisiones;
+            const ivaComisionesPct = 21;
+            const sumaIvaComisiones =
+                (deduccionComisiones * ivaComisionesPct) / 100;
+
             this.subtotal = sub_total;
-            this.totalIva = sumaIva;
-            this.total = sub_total + sumaIva - deduccionComisiones;
+            this.totalIva = sumaIvaComisiones;
+            this.total = sub_total + sumaIvaComisiones - deduccionComisiones;
         },
 
         duplicarLiquidacion() {
