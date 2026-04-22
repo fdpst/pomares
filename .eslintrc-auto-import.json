@@ -390,6 +390,9 @@
     "normalizarValorFiltroFecha": true,
     "borrarFiltroFechasLista": true,
     "escribirFiltroFechasLista": true,
-    "leerFiltroFechasLista": true
+    "leerFiltroFechasLista": true,
+    "effectiveBusinessUserId": true,
+    "getSessionAccountId": true,
+    "storageAccountDirName": true
   }
 }

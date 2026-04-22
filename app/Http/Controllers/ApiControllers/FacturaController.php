@@ -144,15 +144,16 @@ class FacturaController extends Controller
 
     public function getFacturas(Request $request, $user_id = null)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json([], 200);
         }
 
-        $facturas = Recibo::with(['nro_factura', 'nro_factura_rectificativa', 'cliente', 'serie'])
-            ->where('user_id', '=', $effectiveUserId)
-            ->orderBy('id', 'DESC');
+        $facturas = GestorHelper::applyUserIdScope(
+            Recibo::with(['nro_factura', 'nro_factura_rectificativa', 'cliente', 'serie']),
+            $request
+        )->orderBy('id', 'DESC');
 
         if ($request->facturarectificativa) {
             $facturas->whereHas('nro_factura_rectificativa');
@@ -186,17 +187,19 @@ class FacturaController extends Controller
 
     public function getFacturasProforma(Request $request, $user_id = null)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json([], 200);
         }
 
-        $facturas = Recibo::whereHas('nro_factura_prof')
-            ->with(['nro_factura_prof' => function ($query) {
-                $query->orderBy('nro_factura_prof', 'ASC');
-            }])
-            ->where('user_id', '=', $effectiveUserId)
+        $facturas = GestorHelper::applyUserIdScope(
+            Recibo::whereHas('nro_factura_prof')
+                ->with(['nro_factura_prof' => function ($query) {
+                    $query->orderBy('nro_factura_prof', 'ASC');
+                }]),
+            $request
+        )
             ->orderBy('id', 'DESC')
             ->get();
 
@@ -328,19 +331,18 @@ class FacturaController extends Controller
     public function printEmitidas(Request $request, $fecha_inicio, $fecha_fin)
     {
         $user = $request->user();
-        $user_id = $user->id;
         $fecha = Carbon::now();
         $desde = Carbon::parse($fecha_inicio);
         $hasta = Carbon::parse($fecha_fin);
         $empresa = 'Autónomo Cristina Gil Mateo';
         $ejercicio = $desde->format('Y');
-        $recibos = Recibo::where('fecha', '>=', $desde->format('Y-m-d'))
+        $recibos = GestorHelper::applyUserIdScope(Recibo::query(), $request)
+            ->where('fecha', '>=', $desde->format('Y-m-d'))
             ->where('fecha', '<=', $hasta->format('Y-m-d'))
             ->where(function ($query) {
                 $query->whereHas('nro_factura');
                 //$query->orWhereHas('nro_factura_rectificativa');
             })
-            ->where('user_id', '=', $user_id)
             ->orderBy('fecha', 'ASC')
             ->get();
         $data = [
@@ -415,10 +417,8 @@ class FacturaController extends Controller
     }
     public function getDataAlbaranes(Request $request, $cliente_id)
     {
-        $user = $request->user();
-        $albaranesEnviados = AlbaranesEnviado::with('cliente')
+        $albaranesEnviados = GestorHelper::applyUserIdScope(AlbaranesEnviado::with('cliente'), $request)
             ->where('cliente_id', $cliente_id)
-            ->where('user_id', $user['id'])
             ->where('contabilizado', '=', null)
             ->orderBy('created_at', 'DESC')
             ->get();
@@ -493,15 +493,16 @@ class FacturaController extends Controller
     }
     public function exportExcel(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(["success" => false, "message" => "No tiene acceso a este recurso."], 403);
         }
 
-        // Reemplazar el user_id en los filtros con el effectiveUserId
         $filters = $request->all();
-        $filters['user_id'] = $effectiveUserId;
+        if (GestorHelper::restrictQueriesByOwnerUserId()) {
+            $filters['user_id'] = $effectiveUserId;
+        }
 
         $type = $request->type;
 
@@ -522,18 +523,19 @@ class FacturaController extends Controller
 
     private function exportExcelFacturasEnviadas(array $filters)
     {
-        $userId = (int) $filters['user_id'];
+        $userId = isset($filters['user_id']) ? (int) $filters['user_id'] : null;
 
         $with = $userId === self::USER_ID_EXTENDED_FACTURAS_ENVIADAS_EXCEL
             ? ['nro_factura', 'nro_factura_rectificativa', 'cliente.pais']
             : ['nro_factura', 'cliente'];
 
-        $facturas = Recibo::whereHas('nro_factura')
+        $q = Recibo::whereHas('nro_factura')
             ->with($with)
-            ->whereBetween('fecha', [$filters['desde'], $filters['hasta']])
-            ->where('user_id', '=', $filters['user_id'])
-            ->orderBy('id', 'DESC')
-            ->get();
+            ->whereBetween('fecha', [$filters['desde'], $filters['hasta']]);
+        if ($userId !== null) {
+            $q->where('user_id', '=', $userId);
+        }
+        $facturas = $q->orderBy('id', 'DESC')->get();
 
         if ($facturas->isEmpty()) {
             return response()->json([
@@ -551,11 +553,12 @@ class FacturaController extends Controller
 
     private function exportExcelFacturasRecibidas(array $filters)
     {
-        $facturas = FacturaRecibida::with("proveedor")
-            ->whereBetween("fecha", [$filters["desde"], $filters['hasta']])
-            ->where('user_id', '=', $filters['user_id'])
-            ->orderBy('id', 'DESC')
-            ->get();
+        $q = FacturaRecibida::with("proveedor")
+            ->whereBetween("fecha", [$filters["desde"], $filters['hasta']]);
+        if (isset($filters['user_id'])) {
+            $q->where('user_id', '=', $filters['user_id']);
+        }
+        $facturas = $q->orderBy('id', 'DESC')->get();
 
         if ($facturas->isEmpty()) {
             return response()->json([

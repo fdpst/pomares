@@ -174,10 +174,6 @@ export default {
                     value: "email",
                 },
                 {
-                    title: "Perfil",
-                    value: "role_str",
-                },
-                {
                     title: "Fecha",
                     value: "created_at",
                 },
@@ -206,11 +202,9 @@ export default {
 
     methods: {
         getClientes() {
-            // Filtrar solo clientes (role 2)
             axios
                 .get(`api/get-usuarios`, {
                     params: {
-                        role: 2,
                         itemsPerPage: this.options.itemsPerPage,
                         page: this.options.page,
                         search: this.search,
@@ -268,8 +262,7 @@ export default {
                         console.error(err);
                     });
             } else {
-                // Crear nuevo cliente con role 2 por defecto
-                this.userSelected = { id: null, role: 2 };
+                this.userSelected = { id: null, role: 1 };
                 this.isFormUsuariosVisible = true;
             }
         },

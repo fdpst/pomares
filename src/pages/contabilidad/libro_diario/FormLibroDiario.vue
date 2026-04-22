@@ -730,7 +730,7 @@ export default {
         // Get proveedores
         getProveedores() {
             axios
-                .get(`api/get-proveedores/${localStorage.getItem("user_id")}`)
+                .get(`api/get-proveedores`)
                 .then(
                     (res) => {
                         this.proveedores = res.data;

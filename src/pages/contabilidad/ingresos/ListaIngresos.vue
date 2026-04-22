@@ -62,6 +62,7 @@ import { date_mixin } from '../mixins/date_mixin'
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js'
 import rangoFechas from '../rangoFechas.vue'
 import { formatPrice } from '@/@core/utils/formatters'
+import { effectiveBusinessUserId } from '@/utils/tenantContext'
 
 export default {
   mixins: [date_mixin, gestorClienteMixin],
@@ -133,26 +134,21 @@ export default {
         }, err => {
           $toast.error('Error Eliminando ingreso')
         })
-    },
-    onClienteChanged(event) {
-      console.log('ListaIngresos: Cliente cambiado, recargando ingresos...', event.detail)
-      this.ingresos = []
-      this.getIngresos()
-      }
+      },
+      onClienteChanged(event) {
+        console.log('ListaIngresos: Cliente cambiado, recargando ingresos...', event.detail)
+        this.ingresos = []
+        this.getIngresos()
+      },
     },
     formatPrice,
     computed: {
       isloading: function() {
         return this.$store.getters.getloading
+      },
+      effectiveUserId() {
+        return effectiveBusinessUserId()
+      },
     },
-    effectiveUserId() {
-      const role = parseInt(localStorage.getItem('role'))
-      const selectedCliente = localStorage.getItem('selected_cliente_id')
-      if (role === 3 && selectedCliente) {
-        return selectedCliente
-      }
-      return localStorage.getItem('user_id')
-      }
-    }
   }
 </script>

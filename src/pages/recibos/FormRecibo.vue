@@ -674,7 +674,7 @@
                         class="mx-1 text-white"
                         v-if="recibo.nota_url != null && tipo == 'nota'"
                         target="_blank"
-                        :href="`/storage/recibos/userId_${recibo.user_id || user_id}/${recibo.nota_url}`"
+                        :href="`/storage/recibos/userId_${recibo.user_id || userId}/${recibo.nota_url}`"
                         >ver pdf
                     </VBtn>
                 </template>
@@ -700,7 +700,7 @@
         :tipo="tipo"
         :email="recibo.cliente.email"
         :id_factura="recibo.id"
-        :user_id="user_id"
+        :user_id="userId"
     >
     </email-content-dialog>
 
@@ -730,6 +730,7 @@ import { ParamSystemEnum } from "@/@core/types/ParamSystem.enum";
 import { requiredValidator } from "@/@core/utils/validators";
 import gestorClienteMixin from "@/global_mixins/gestorClienteMixin.js";
 import { $api } from "@/utils/api";
+import { getSessionAccountId } from "@/utils/tenantContext";
 import ClienteSelect from "../../components/ClienteSelect.vue";
 import CRUDSelect from "../../components/CRUDSelect.vue";
 import CustomerForm from "../../components/CustomerForm.vue";
@@ -788,7 +789,6 @@ export default {
             batchEnabled: false,
 
             // Generales
-            user_id: localStorage.getItem("user_id"),
             titulo: {
                 facturaproforma: "FACTURA PROFORMA",
                 factura: "FACTURA",
@@ -832,7 +832,7 @@ export default {
                 servicios: [],
                 iva: 0,
                 tipo_iva: 21,
-                user_id: localStorage.getItem("user_id"),
+                user_id: null,
                 albaranes: [],
                 fecha_recurrente: new Date().getDate(),
             },
@@ -847,7 +847,7 @@ export default {
                 importe: "",
                 iva_percent: 0,
                 lote: "",
-                user_id: localStorage.getItem("user_id"),
+                user_id: null,
             },
 
             // Clientes
@@ -859,7 +859,7 @@ export default {
                 id: null,
                 total: 0,
                 nro_presupuesto: null,
-                user_id: localStorage.getItem("user_id"),
+                user_id: null,
             },
 
             // Arrays generales
@@ -913,7 +913,7 @@ export default {
     mounted() {
         this.validadorUrl = this.$route.href;
 
-        this.dataGet(); // Obtenemos albaranes de cliente sin contabilidad en --> this.consulta
+        this.dataGet();
 
         this.tipo == "parte-trabajo" ? this.getPrespuestos() : null;
         this.findAllSeries();
@@ -1328,11 +1328,7 @@ export default {
         },
         getPrespuestos() {
             axios
-                .get(
-                    `api/get-presupuestos-for-parte-trabajo/${localStorage.getItem(
-                        "user_id"
-                    )}`
-                )
+                .get(`api/get-presupuestos-for-parte-trabajo`)
                 .then(
                     (res) => {
                         this.presupuestos = res.data;
@@ -1355,20 +1351,10 @@ export default {
             );
         },
         dataGet() {
-            axios
-                .get(
-                    `api/get-data-albaranes/${localStorage.getItem("user_id")}`
-                )
-                .then(
-                    (res) => {
-                        this.albaranesEnviados = res.data.albaranesEnviados;
-                        this.consulta = res.data.albaranesEnviados;
-                        // console.log('***** albaranes consulta *****' + JSON.stringify(this.consulta));
-                    },
-                    (res) => {
-                        $toast.error("Error consultando albaranes Enviados");
-                    }
-                );
+            const cid = this.recibo?.cliente_id;
+            if (cid) {
+                this.getDataAlbaranes(cid);
+            }
         },
 
         async loadBatchSetting() {
@@ -1579,19 +1565,20 @@ export default {
             },
         },
         url_files() {
+            const owner = this.recibo?.user_id || this.userId;
             return {
                 presupuesto_url:
                     "userId_" +
-                    this.user_id +
+                    owner +
                     "/" +
                     this.recibo.presupuesto_url,
                 factura_url:
-                    "userId_" + this.user_id + "/" + this.recibo.factura_url,
-                nota_url: "userId_" + this.user_id + "/" + this.recibo.nota_url,
+                    "userId_" + owner + "/" + this.recibo.factura_url,
+                nota_url: "userId_" + owner + "/" + this.recibo.nota_url,
             };
         },
         userId() {
-            return localStorage.getItem("user_id");
+            return getSessionAccountId();
         },
         beneficio() {
             let total_recibo = this.recibo.has_iva

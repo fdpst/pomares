@@ -88,7 +88,7 @@
     },
     methods: {
       getPartesTrabajo() {
-        axios.get(`api/get-parte-trabajo/${localStorage.getItem('user_id')}`).then(res => {
+        axios.get(`api/get-parte-trabajo`).then(res => {
           this.items = res.data
         }, err => {
           this.$toast.error('Error consultando items')

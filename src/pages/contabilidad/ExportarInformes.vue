@@ -136,9 +136,6 @@ export default {
     isloading: function () {
       return this.$store.getters.getloading;
     },
-    userId() {
-      return localStorage.user_id;
-    },
   },
 };
 </script>

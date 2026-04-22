@@ -13,13 +13,13 @@ class ProveedorComisionController extends Controller
 {
     public function index(Request $request, int $proveedor_id)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->query('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $proveedor = Proveedor::where('user_id', $effectiveUserId)->find($proveedor_id);
+        $proveedor = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->find($proveedor_id);
         if (! $proveedor) {
             return response()->json(['error' => 'Punto de venta no encontrado'], 404);
         }
@@ -33,7 +33,7 @@ class ProveedorComisionController extends Controller
 
     public function store(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->input('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -54,7 +54,7 @@ class ProveedorComisionController extends Controller
             'servicio_id.unique' => 'Ya existe una comisión para este producto en este punto de venta.',
         ]);
 
-        $proveedor = Proveedor::where('user_id', $effectiveUserId)->find($request->proveedor_id);
+        $proveedor = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->find($request->proveedor_id);
         if (! $proveedor) {
             return response()->json(['error' => 'Punto de venta no encontrado'], 404);
         }
@@ -72,7 +72,7 @@ class ProveedorComisionController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->input('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -83,7 +83,7 @@ class ProveedorComisionController extends Controller
             return response()->json(['error' => 'Comisión no encontrada'], 404);
         }
 
-        $proveedor = Proveedor::where('user_id', $effectiveUserId)->find($comision->proveedor_id);
+        $proveedor = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->find($comision->proveedor_id);
         if (! $proveedor) {
             return response()->json(['error' => 'Punto de venta no encontrado'], 404);
         }
@@ -115,7 +115,7 @@ class ProveedorComisionController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->query('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -126,7 +126,7 @@ class ProveedorComisionController extends Controller
             return response()->json(['error' => 'Comisión no encontrada'], 404);
         }
 
-        $proveedor = Proveedor::where('user_id', $effectiveUserId)->find($comision->proveedor_id);
+        $proveedor = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->find($comision->proveedor_id);
         if (! $proveedor) {
             return response()->json(['error' => 'Punto de venta no encontrado'], 404);
         }

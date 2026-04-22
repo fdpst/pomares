@@ -149,6 +149,7 @@
 <script>
 import {localizePrice} from "@/components/Transformations";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import { format_precio_autofactura } from "@/utils/format_precio.js";
 import { itemPasaFiltroFecha } from "@/utils/filtroFechaLista.js";
 import {
@@ -435,16 +436,8 @@ export default {
         isloading: function () {
             return this.$store.getters.getloading;
         },
-        user_id() {
-            return localStorage.getItem("user_id");
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return this.user_id;
+            return effectiveBusinessUserId();
         },
         facturasRecibidasFiltradas() {
             return this.facturaRecibidas.filter((row) =>

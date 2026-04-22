@@ -91,7 +91,7 @@
            
           let imagenes = JSON.parse(doc.pdf) 
           let originaName = window.location.origin + '/'
-          let pathServer = 'storage/documentos/userId_' + this.user_id + '/factura_recibidas/'
+          let pathServer = 'storage/documentos/userId_' + doc.user_id + '/factura_recibidas/'
           let pathDoc = ''
           let documentImagen = ''
           for(var r = 0; r < imagenes.length; r++){
@@ -116,7 +116,7 @@
          });
         },
       getAlbaranes() {
-        axios.get(`api/get-albaranes/${localStorage.getItem('user_id')}`).then(res => {
+        axios.get(`api/get-albaranes`).then(res => {
           this.albaranes = res.data.albaranes
         }, err => {
           $toast.error('Error consultando albaranes')
@@ -163,9 +163,6 @@
       isloading: function() {
         return this.$store.getters.getloading
       },
-      user_id(){
-        return localStorage.user_id
-      }
     }
   }
 </script>

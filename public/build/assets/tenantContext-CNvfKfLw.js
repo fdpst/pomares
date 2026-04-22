@@ -1,0 +1,1 @@
+const n="user_id";function o(){const t=localStorage.getItem(n),e=Number(t);return Number.isFinite(e)&&e>0?e:null}function r(){const t=parseInt(localStorage.getItem("role")||"0",10),e=localStorage.getItem("selected_cliente_id");return t===3&&e?e:o()}export{r as e,o as g};

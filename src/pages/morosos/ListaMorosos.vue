@@ -76,6 +76,7 @@
 
 <script>
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import dialogpayreminder from "./partials/dialog-pay-reminder.vue";
 
 export default {
@@ -184,12 +185,7 @@ export default {
             return this.$store.getters.getloading;
         },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
     },
 };

@@ -12,6 +12,7 @@ class AlbaranResource extends JsonResource
   {
     return [
         'id'           => $this->id,
+        'user_id'      => $this->user_id,
         'proveedor_id' => $this->proveedor_id,
         'proveedor'    => $this->proveedor ? $this->proveedor->nombre : null,
         'fecha'        => $this->fecha->format('d-m-Y'),

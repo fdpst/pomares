@@ -26,15 +26,16 @@ class ServicioController extends Controller
 
   public function getServicios(Request $request, $user_id = null)
   {
-    $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
 
     if (!$effectiveUserId) {
       return response()->json(request()->has('amount') ? ['data' => [], 'total' => 0] : [], 200);
     }
 
-    $query = Servicio::with(['CuentaContable', 'Iva'])
-      ->where('user_id', '=', $effectiveUserId)
-      ->orderBy('created_at', 'DESC');
+    $query = GestorHelper::applyUserIdScope(
+      Servicio::with(['CuentaContable', 'Iva'])->orderBy('created_at', 'DESC'),
+      $request
+    );
 
     if ($request->venta != null) {
       $query->where('venta', $request->venta);
@@ -80,8 +81,10 @@ class ServicioController extends Controller
       return response()->json(0, 200);
     }
 
-    $servicio = Servicio::where('venta', $venta)->where('user_id', $effectiveUserId)
-      ->orderBy('nro', 'DESC')->first();
+    $servicio = GestorHelper::applyUserIdScope(
+      Servicio::query()->where('venta', $venta)->orderBy('nro', 'DESC'),
+      $request
+    )->first();
     return $servicio?->nro ?? 0;
   }
   public function getServicioByid($servicio_id)
@@ -101,26 +104,26 @@ class ServicioController extends Controller
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
 
-    $servicio = Servicio::where('id', (int) $servicio_id)
-      ->where('user_id', $effectiveUserId)
-      ->where('venta', 0)
-      ->first();
+    $servicio = GestorHelper::applyUserIdScope(
+      Servicio::query()->where('id', (int) $servicio_id)->where('venta', 0),
+      $request
+    )->first();
 
     if (!$servicio) {
       return response()->json(['error' => 'Producto no encontrado'], 404);
     }
 
-    $rows = ServicioPrecioCambio::where('servicio_id', $servicio->id)
-      ->where('user_id', $effectiveUserId)
-      ->orderByDesc('id')
-      ->get(['precio_anterior', 'precio_nuevo', 'created_at']);
+    $rows = GestorHelper::applyUserIdScope(
+      ServicioPrecioCambio::query()->where('servicio_id', $servicio->id)->orderByDesc('id'),
+      $request
+    )->get(['precio_anterior', 'precio_nuevo', 'created_at']);
 
     return response()->json($rows, 200);
   }
 
   public function saveServicio(Request $request)
   {
-    $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
 
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -132,9 +135,10 @@ class ServicioController extends Controller
     $existente = null;
     $idRaw = $request->input('id');
     if ($idRaw !== null && $idRaw !== '' && $idRaw !== 'null') {
-      $existente = Servicio::where('id', $idRaw)
-        ->where('user_id', $effectiveUserId)
-        ->first();
+      $existente = GestorHelper::applyUserIdScope(
+        Servicio::query()->where('id', $idRaw),
+        $request
+      )->first();
     }
 
     $servicio = Servicio::updateOrCreate(['id' => $request->id], [

@@ -38,14 +38,14 @@ class ClienteController extends Controller
     public function getClientes(Request $request, $user_id = null)
     {
         // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
         
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
         
         $itemsPerPage = $request->amount ?? 15;
-        $clientes = Cliente::where('user_id', '=', $effectiveUserId)
+        $clientes = GestorHelper::applyUserIdScope(Cliente::query(), $request)
             ->where(function ($query) use ($request) {
                 if ($request->search && $request->search != "" && gettype($request->search) == 'string') {
                     $query->where('nombre', 'LIKE', '%' . $request->search . '%')
@@ -91,7 +91,7 @@ class ClienteController extends Controller
         
         // Obtener el user_id correcto usando el helper (cliente_id si es gestor)
         // NO pasar $request->user_id como segundo parámetro porque podría ser el user_id del gestor
-        $effectiveUserId = GestorHelper::getUserId($request, null);
+        $effectiveUserId = GestorHelper::getUserId($request);
         
         // RESPUESTA DIRECTA: 
         // Si es gestor (role == 3) y hay cliente seleccionado: usa el ID del cliente seleccionado
@@ -185,14 +185,13 @@ class ClienteController extends Controller
 
     public function exportClientes(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, null);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $clientes = Cliente::with(['pais', 'provincia'])
-            ->where('user_id', $effectiveUserId)
+        $clientes = GestorHelper::applyUserIdScope(Cliente::query()->with(['pais', 'provincia']), $request)
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('nombre', 'LIKE', '%' . $search . '%')
@@ -215,7 +214,7 @@ class ClienteController extends Controller
             'file' => 'required|file|mimes:xls,xlsx,csv',
         ]);
 
-        $effectiveUserId = GestorHelper::getUserId($request, null);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);

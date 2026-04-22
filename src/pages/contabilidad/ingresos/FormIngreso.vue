@@ -145,7 +145,6 @@ export default {
         codigo: "",
         importe: "",
         descripcion: "",
-        user_id: null,
       },
       facturaInfo: null,
       morosos: [],
@@ -158,15 +157,6 @@ export default {
     },
     errors() {
       return this.$store.getters.geterrors
-    },
-    effectiveUserId() {
-      const role = parseInt(localStorage.getItem("role"))
-      const selectedCliente = localStorage.getItem("selected_cliente_id")
-      if (role === 3 && selectedCliente) {
-        return selectedCliente
-      }
-      
-      return localStorage.getItem("user_id")
     },
     codigoOpciones() {
       const opciones = this.morosos.map(m => {
@@ -202,8 +192,6 @@ export default {
   },
 
   created() {
-    this.ingreso.user_id = this.effectiveUserId
-
     if (this.$route.query.id) {
       this.getIngresoById(this.$route.query.id)
     }
@@ -263,7 +251,6 @@ export default {
       axios.get(`api/get-ingreso-by-id/${ingreso_id}`).then(
         res => {
           this.ingreso = res.data
-          this.ingreso.user_id = this.effectiveUserId
           this.getMorosos().then(() => {
             this.onCodigoChange(this.ingreso.codigo)
           })
@@ -280,8 +267,8 @@ export default {
         
         return
       }
-      this.ingreso.user_id = this.effectiveUserId
-      axios.post("api/save-ingreso", this.ingreso).then(
+      const { user_id: _omitUserId, ...ingresoPayload } = this.ingreso
+      axios.post("api/save-ingreso", ingresoPayload).then(
         () => {
           $toast.sucs("Ingreso guardado con exito")
           if (this.$route.query.identi && this.$route.query.tipo) {
@@ -300,7 +287,6 @@ export default {
       )
     },
     onClienteChanged() {
-      this.ingreso.user_id = this.effectiveUserId
       this.facturaInfo = null
       this.ingreso.codigo = ""
       this.getMorosos()

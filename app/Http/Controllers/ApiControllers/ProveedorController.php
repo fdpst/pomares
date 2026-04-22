@@ -16,13 +16,13 @@ class ProveedorController extends Controller
 {
   public function getProveedores(Request $request, $user_id = null){
     // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-    $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
     
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
     
-    $proveedores = Proveedor::where('user_id', '=', $effectiveUserId)->orderBy('created_at', 'DESC')->get();
+    $proveedores = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->orderBy('created_at', 'DESC')->get();
     return response()->json($proveedores, 200);
   }
 
@@ -33,7 +33,7 @@ class ProveedorController extends Controller
 
   public function saveProveedor(ProveedorRequest $request){
     // Obtener el user_id correcto usando el helper (cliente_id si es gestor)
-    $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
     
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);

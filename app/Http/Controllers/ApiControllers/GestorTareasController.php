@@ -16,15 +16,19 @@ use App\Models\TareaPorDragg;
 use App\Models\TareaPorUsuario;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Helpers\GestorHelper;
 
 class GestorTareasController extends Controller
 {
    
 
 
-    public function newDrag(Request $request, $user_id){
+    public function newDrag(Request $request, $user_id = null){
        
-        $user_id =  $user_id;
+        $user_id = GestorHelper::getUserId($request);
+        if (!$user_id) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
         
         $drag = null;
         
@@ -109,7 +113,10 @@ class GestorTareasController extends Controller
         $administradores = json_decode($request->administradores);
         $nroAdmin = count($administradores);
 
-        $user_id = $request->user_id;
+        $user_id = GestorHelper::getUserId($request);
+        if (!$user_id) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
 
         $task = null;
         
@@ -189,14 +196,14 @@ class GestorTareasController extends Controller
     }
 
 
-    public function index($user_id)
+    public function index(Request $request, $user_id = null)
     {
+        $effectiveUserId = GestorHelper::getUserId($request);
+        if (!$effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
 
-        $user_id = $user_id;
-
-       
-
-        $dragglables = DraggableList::where('user_id', $user_id)->get(['id', 'user_id', 'drag', 'newTask']);
+        $dragglables = GestorHelper::applyUserIdScope(DraggableList::query(), $request)->get(['id', 'user_id', 'drag', 'newTask']);
 
         $dragsTasksGet = [];
         foreach ($dragglables as $key => $value) {
@@ -210,7 +217,7 @@ class GestorTareasController extends Controller
         }
 
         $status = StatusTarea::get(['id', 'nombre']);
-        $tasksForUser = TareaPorUsuario::with('task', 'user')->where('user_id', $user_id)->orderBy('id','desc')->get(['user_id' , 'tarea_id']);
+        $tasksForUser = GestorHelper::applyUserIdScope(TareaPorUsuario::query()->with('task', 'user'), $request)->orderBy('id','desc')->get(['user_id' , 'tarea_id']);
         
         $obtainTasks = [];
 
@@ -320,7 +327,10 @@ class GestorTareasController extends Controller
 
         $taskUp = $request->task;
         $drag = $request->draggable;
-        $user_id = $request->user_id*1;
+        $user_id = GestorHelper::getUserId($request);
+        if (!$user_id) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
         $administradores = $request->administradores;
 
         
@@ -365,7 +375,10 @@ class GestorTareasController extends Controller
                             foreach ($kills as $tareaU) {
                                 if ($tareaU['user_id'] == $idUser) {
                                     TareaPorDragg::where('tarea_id', $tareaU['tarea_id'])->delete();
-                                    TareaPorUsuario::findOrFail($tareaU['id'])->where('user_id', $idUser)->delete();
+                                    GestorHelper::applyUserIdScope(
+                                        TareaPorUsuario::query()->where('id', $tareaU['id']),
+                                        $request
+                                    )->delete();
                                    
                                 }
                             }

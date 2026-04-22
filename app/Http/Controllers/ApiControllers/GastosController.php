@@ -22,7 +22,7 @@ class GastosController extends Controller
      */
     public function index(Request $request, $user_id = null)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json([
@@ -34,7 +34,7 @@ class GastosController extends Controller
 
         if ($request->isMethod("GET")) {
 
-            $gastos = Gasto::with('tipo')->where('user_id', $effectiveUserId)->paginate();
+            $gastos = GestorHelper::applyUserIdScope(Gasto::with('tipo'), $request)->paginate();
 
             return response()->json([
                 'status' =>  200,
@@ -63,7 +63,7 @@ class GastosController extends Controller
      */
     public function store(StoreGastosRequest $request)
     {
-       $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+       $effectiveUserId = GestorHelper::getUserId($request);
 
        if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -137,7 +137,7 @@ class GastosController extends Controller
 
         if ($request->isMethod("GET")) {
 
-            $gasto = Gasto::with('tipo')->where('id', $id)->where('user_id', $effectiveUserId)->first();
+            $gasto = GestorHelper::applyUserIdScope(Gasto::with('tipo')->where('id', $id), $request)->first();
 
             if (!$gasto) {
                 return response()->json(['error' => 'Gasto no encontrado'], 404);
@@ -166,13 +166,13 @@ class GastosController extends Controller
      */
     public function update(UpdateGastosRequest $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $idGasto = $request->user_id;
+        $idGasto = $request->id;
         $gasto = null;
 
         if ($request->isMethod("PUT")) {
@@ -241,7 +241,7 @@ class GastosController extends Controller
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $gasto = Gasto::where('id', $id)->where('user_id', $effectiveUserId)->first();
+        $gasto = GestorHelper::applyUserIdScope(Gasto::query()->where('id', $id), $request)->first();
         if (!$gasto) {
             return response()->json(['error' => 'Gasto no encontrado'], 404);
         }

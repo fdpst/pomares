@@ -332,7 +332,6 @@ export default {
         contacto_nombre: "",
         contacto_telefono: "",
         activo: true,
-        user_id: localStorage.getItem("user_id"),
         historial: [],
       },
       rules: {
@@ -376,7 +375,8 @@ export default {
 
     saveCliente() 
     {
-      axios.post("api/save-cliente", this.cliente).then(
+      const { user_id: _omitUserId, ...clientePayload } = this.cliente;
+      axios.post("api/save-cliente", clientePayload).then(
         (res) => {
           $toast.sucs("Cliente guardado con exito");
           this.$router.push("/lista-clientes");

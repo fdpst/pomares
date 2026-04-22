@@ -34,14 +34,14 @@ axios.interceptors.request.use(
       delete config.headers.Authorization
     }
 
-    const role = parseInt(localStorage.getItem('role'))
+    const role = parseInt(localStorage.getItem('role') || '0', 10)
     const selectedClienteId = localStorage.getItem('selected_cliente_id')
-    
-    // Si es gestor y tiene un cliente seleccionado, agregar el cliente_id
-    if (role === 3 && selectedClienteId) {
-      // Agregar como header
+
+    // Gestor (3) o empleado (4) con cliente seleccionado: contexto de cuenta de negocio
+    // (misma lógica que GestorHelper::getUserId + validación en servidor).
+    if ((role === 3 || role === 4) && selectedClienteId) {
       config.headers['X-Selected-Cliente-Id'] = selectedClienteId
-      
+
       const method = (config.method || 'get').toLowerCase()
 
       // GET, DELETE: cliente_id en query para GestorHelper

@@ -2,100 +2,134 @@
 
 namespace App\Helpers;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 
 class GestorHelper
 {
     /**
-     * Obtiene el user_id correcto según el rol del usuario
-     * Si es gestor, retorna el cliente_id seleccionado
-     * Si no es gestor, retorna el user_id del usuario autenticado o el proporcionado
-     * 
-     * @param Request|null $request
-     * @param int|null $routeUserId - user_id de la ruta (opcional)
-     * @return int|null
+     * Cuenta de datos de negocio:
+     * 1) APP_SHARED_DATA_USER_ID (si está definido),
+     * 2) Si el usuario es gestor/empleado (3/4) y la petición incluye un cliente asociado
+     *    (header X-Selected-Cliente-Id o query/body cliente_id), ese id tras validar en `gestor_clientes`,
+     * 3) En otro caso, el id del usuario autenticado.
+     *
+     * El cliente enviado no se acepta a ciegas: debe existir la asociación gestor→cliente.
+     *
+     * @deprecated El segundo parámetro se ignora; mantener solo por compatibilidad de firma.
      */
     public static function getUserId(Request $request = null, $routeUserId = null)
     {
         $user = Auth::user();
-        
-        // Si no hay usuario autenticado, retornar null
+
         if (!$user) {
             return null;
         }
-        
-        // Si es gestor, verificar si hay un cliente seleccionado
-        if ($user->role == 3) {
-            // Intentar obtener el cliente_id del header
-            // Laravel puede leer headers personalizados de diferentes formas
-            $clienteId = null;
-            if ($request) {
-                // Intentar diferentes formas de leer el header
-                $clienteId = $request->header('X-Selected-Cliente-Id');
-                // Si no funciona, intentar sin el prefijo HTTP_ que Laravel a veces agrega
-                if (!$clienteId) {
-                    $clienteId = $request->header('HTTP_X_SELECTED_CLIENTE_ID');
-                }
-                // Otra forma alternativa
-                if (!$clienteId) {
-                    $allHeaders = $request->headers->all();
-                    foreach ($allHeaders as $key => $value) {
-                        if (strtolower($key) === 'x-selected-cliente-id' || strtolower($key) === 'http-x-selected-cliente-id') {
-                            $clienteId = is_array($value) ? $value[0] : $value;
-                            break;
-                        }
-                    }
-                }
+
+        $shared = config('app.shared_data_user_id');
+        if ($shared !== null && $shared !== '') {
+            $sid = filter_var($shared, FILTER_VALIDATE_INT);
+            if ($sid !== false && $sid > 0) {
+                return (int) $sid;
             }
-            
-            // Si no está en el header, intentar del body (para POST/PUT/PATCH)
-            // Esta es la forma más confiable porque el interceptor de axios lo agrega al body
-            if (!$clienteId && $request) {
-                $clienteId = $request->input('cliente_id');
+        }
+
+        $role = (int) $user->role;
+        if (in_array($role, [3, 4], true) && $request instanceof Request) {
+            $cid = self::parsePositiveIntId(
+                $request->header('X-Selected-Cliente-Id')
+                ?? $request->query('cliente_id')
+                ?? $request->input('cliente_id')
+            );
+            if ($cid !== null && self::userMayActAsCliente($user, $cid)) {
+                return $cid;
             }
-            
-            // Si no está en el body, intentar del query parameter (para GET)
-            if (!$clienteId && $request) {
-                $clienteId = $request->query('cliente_id');
-            }
-            
-            // NO usar el primer cliente como fallback automático
-            // El gestor debe seleccionar explícitamente un cliente
-            // Si no hay cliente_id, retornar null para que la validación falle
-            
-            // Si hay un cliente_id, validar que el gestor tenga acceso
-            if ($clienteId) {
-                // Convertir a entero para comparación
-                $clienteId = (int) $clienteId;
-                $cliente = $user->clientesAsociados()->where('users.id', $clienteId)->first();
-                if ($cliente) {
-                    return $clienteId;
-                }
-            }
-            
-            // Si no hay cliente seleccionado o no tiene acceso, retornar null
-            // NO usar el routeUserId porque sería el user_id del gestor, no del cliente
+        }
+
+        return (int) $user->id;
+    }
+
+    private static function parsePositiveIntId($raw): ?int
+    {
+        if ($raw === null || $raw === '') {
             return null;
         }
-        
-        // Para otros roles, retornar el user_id de la ruta si existe, sino el del usuario autenticado
-        return $routeUserId ?? $user->id;
+        $cid = filter_var($raw, FILTER_VALIDATE_INT);
+        if ($cid === false || $cid <= 0) {
+            return null;
+        }
+
+        return (int) $cid;
     }
-    
+
+    private static function userMayActAsCliente(User $user, int $clienteId): bool
+    {
+        return $user->clientesAsociados()->where('users.id', $clienteId)->exists();
+    }
+
     /**
-     * Valida que el gestor tenga acceso al cliente especificado
+     * Perfil explícito por id en ruta (p. ej. administración de usuarios). Si no hay ruta, mismo que getUserId().
+     */
+    public static function resolveUserProfileId(Request $request, $routeUserId = null): ?int
+    {
+        $tid = filter_var($routeUserId, FILTER_VALIDATE_INT);
+        if ($tid !== false && $tid > 0) {
+            return $tid;
+        }
+
+        return self::getUserId($request);
+    }
+
+    /**
+     * Compatibilidad: antes validaba gestor-cliente; ya no se usa lógica por rol.
      */
     public static function validateGestorAccess($clienteId)
     {
-        $user = Auth::user();
-        
-        if ($user->role != 3) {
-            return true; // No es gestor, no necesita validación
+        return true;
+    }
+
+    /**
+     * Si es true, listados y comprobaciones de pertenencia filtran por la columna user_id (getUserId).
+     * Si es false (por defecto), cualquier usuario autenticado ve y modifica datos guardados por cualquier otro.
+     */
+    public static function restrictQueriesByOwnerUserId(): bool
+    {
+        return filter_var(config('app.restrict_queries_by_owner_user_id', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Añade where user_id = contexto salvo en modo datos abiertos.
+     */
+    public static function applyUserIdScope(Builder $query, ?Request $request = null, string $column = 'user_id'): Builder
+    {
+        if (! self::restrictQueriesByOwnerUserId()) {
+            return $query;
         }
-        
-        $cliente = $user->clientesAsociados()->where('users.id', $clienteId)->first();
-        return $cliente !== null;
+
+        $uid = self::getUserId($request);
+        if (! $uid) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        return $query->where($column, $uid);
+    }
+
+    /**
+     * Comprueba si la fila pertenece al tenant actual; en modo abierto siempre true.
+     */
+    public static function ownsUserIdRow(?Request $request, $rowUserId): bool
+    {
+        if (! self::restrictQueriesByOwnerUserId()) {
+            return true;
+        }
+
+        $uid = self::getUserId($request);
+        if (! $uid) {
+            return false;
+        }
+
+        return (int) $rowUserId === (int) $uid;
     }
 }
-

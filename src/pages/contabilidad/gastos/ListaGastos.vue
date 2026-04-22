@@ -96,6 +96,7 @@
 <script>
 import { date_mixin } from "../mixins/date_mixin";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import rangoFechas from "../rangoFechas.vue";
 
 export default {
@@ -219,16 +220,8 @@ export default {
 
             return parseFloat(total).toFixed(2);
         },
-        userId() {
-            return localStorage.getItem("user_id");
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
     },
 };

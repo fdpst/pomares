@@ -17,16 +17,16 @@ use App\Helpers\GestorHelper;
 class ParteTrabajoController extends Controller
 {
   
-  public function getParteTrabajo(Request $request, $user_id){
+  public function getParteTrabajo(Request $request, $user_id = null){
     // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-    $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
     
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
     
     //return NroParteTrabajo::with('presupuesto')->get();
-    $partes_trabajo = Recibo::where('user_id', '=', $effectiveUserId)->with('nro_parte_trabajo.presupuesto.recibo')
+    $partes_trabajo = GestorHelper::applyUserIdScope(Recibo::query(), $request)->with('nro_parte_trabajo.presupuesto.recibo')
         ->whereHas('nro_parte_trabajo')
         ->orderBy('created_at', 'DESC')
         ->get();
@@ -46,7 +46,7 @@ class ParteTrabajoController extends Controller
     }
     
     // $presupuestos = NroPresupuesto::with('recibo:id,total')->get(); // ANTIGUA LINEA
-    $presupuestos = NroPresupuesto::with('recibo:id,total')->where(['user_id' => $effectiveUserId])->get();
+    $presupuestos = GestorHelper::applyUserIdScope(NroPresupuesto::query(), $request)->with('recibo:id,total')->get();
     // # END busca presupuestos segun usuario id
     $presupuestos_resource = PresupuestoSelectResource::collection($presupuestos);
     return response()->json($presupuestos_resource, 200);

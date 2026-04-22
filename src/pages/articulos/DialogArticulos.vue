@@ -24,7 +24,6 @@ export default {
         email: "",
         telefono: "",
         cuenta_contable: {},
-        user_id: localStorage.getItem("user_id"),
       },
       dialog: false,
     };

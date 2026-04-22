@@ -348,6 +348,7 @@
 
 <script>
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import { format_precio_autofactura } from "@/utils/format_precio.js";
 
 export default {
@@ -426,7 +427,6 @@ export default {
     },
 
     created() {
-        this.facturaRec.user_id = this.effectiveUserId;
         this.getSiguienteNroCo();
         this.getProveedores();
         this.getRetenciones();
@@ -486,7 +486,7 @@ export default {
                 );
         },
         getProveedores() {
-            axios.get(`api/get-proveedores/` + this.facturaRec.user_id).then(
+            axios.get(`api/get-proveedores`).then(
                 (res) => {
                     this.proveedores = res.data;
                 },
@@ -513,7 +513,6 @@ export default {
 
             let formData = new FormData();
             formData.append("id", this.facturaRec.id);
-            formData.append("user_id", this.facturaRec.user_id);
             formData.append("fecha", this.facturaRec.fecha);
             formData.append("descripcion", this.facturaRec.descripcion);
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
@@ -566,7 +565,6 @@ export default {
                 this.servicio_dialog = {
                     descripcion: this.servicio.concepto,
                     precio: this.servicio.precio,
-                    user_id: this.effectiveUserId,
                     venta: 0,
                 };
                 //return;
@@ -714,16 +712,8 @@ export default {
         errors() {
             return this.$store.getters.geterrors;
         },
-        userID() {
-            return localStorage.user_id;
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
     },
 

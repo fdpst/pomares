@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use App\Models\Recibo;
+use App\Helpers\GestorHelper;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 
@@ -17,13 +18,13 @@ class NotaController extends Controller
 {
   public function getNotas(Request $request, $user_id = null){
     // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-    $effectiveUserId = \App\Helpers\GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = \App\Helpers\GestorHelper::getUserId($request);
     
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
     
-    $query = Recibo::where('user_id', '=', $effectiveUserId)
+    $query = GestorHelper::applyUserIdScope(Recibo::query(), $request)
       ->whereHas('nro_nota')
       ->with([
         'nro_nota.Anio', 

@@ -25,6 +25,7 @@ use App\Models\NroFactura;
 use App\Models\ReciboServicio;
 use App\Models\AlbaranEnviadoItemAgregado;
 use App\Models\Albaranes\AlbaranesEnviado;
+use App\Helpers\GestorHelper;
 use App\Helpers\ParseHelper;
 use App\Models\SystemParam;
 use App\Enums\ParamSystemEnum;
@@ -40,9 +41,14 @@ class AlbaranController extends Controller
     $this->parseHelper = $parseHelper;
   }
 
-  public function getAlbaranes($user_id){
-    $albaranes = AlbaranResource::collection(Albaran::orderBy('created_at', 'DESC')->where('user_id', '=', $user_id)->get());
-    $proveedores = Proveedor::where('user_id', '=', $user_id)->orderBy('created_at', 'DESC')->get();
+  public function getAlbaranes(Request $request, $user_id = null)
+  {
+    $effectiveUserId = GestorHelper::getUserId($request);
+    if (!$effectiveUserId) {
+      return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+    }
+    $albaranes = AlbaranResource::collection(GestorHelper::applyUserIdScope(Albaran::query(), $request)->orderBy('created_at', 'DESC')->get());
+    $proveedores = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->orderBy('created_at', 'DESC')->get();
     return response()->json(['status' => 200,'albaranes' => $albaranes,'proveedores' => $proveedores]);
   }
 
@@ -59,8 +65,12 @@ class AlbaranController extends Controller
   }
 
   public function saveAlbaran(Request $request){    
+    $uid = GestorHelper::getUserId($request);
+    if (!$uid) {
+      return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+    }
     $albaran = new Albaran;
-    $albaran->user_id = $request->user_id;
+    $albaran->user_id = $uid;
     $albaran->proveedor_id = $request->proveedor_id;
     $albaran->descripcion = $request->descripcion;
     $albaran->fecha = $request->fecha;
@@ -68,7 +78,7 @@ class AlbaranController extends Controller
     // $destination  = $this->pathServer() . "/storage/app/public/albaranes/recibidos/";
     // $storeFiles = HandlerFiles::store($request, $destination);
     // $storeFiles->original['nombresArchivos'];
-    $destination  = $this->pathServer() . "/storage/app/public/documentos/userId_". $request->user_id . "/factura_recibidas/";
+    $destination  = $this->pathServer() . "/storage/app/public/documentos/userId_". $uid . "/factura_recibidas/";
     $storeFiles = HandlerFiles::store($request, $destination);
     $storeFiles->original['nombresArchivos'];
     if (count($storeFiles->original['nombresArchivos']) > 0) {
@@ -80,8 +90,12 @@ class AlbaranController extends Controller
   }
 
   public function updatelbaran(AlbaranRequest $request, $id){
+    $uid = GestorHelper::getUserId($request);
+    if (!$uid) {
+      return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+    }
     $albaran = Albaran::findOrFail($id);
-    $albaran->user_id = $request->user_id;
+    $albaran->user_id = $uid;
     $albaran->proveedor_id = $request->proveedor_id;
     $albaran->descripcion = $request->descripcion;
     $albaran->fecha = $request->fecha;
@@ -89,7 +103,7 @@ class AlbaranController extends Controller
     // $destination  = $this->pathServer() . "storage/app/public/albaranes/recibidos/";
     // $storeFiles = HandlerFiles::store($request, $destination);
     // $storeFiles->original['nombresArchivos'];
-    $destination  = $this->pathServer() . "/storage/app/public/documentos/userId_". $request->user_id ."/factura_recibidas/";
+    $destination  = $this->pathServer() . "/storage/app/public/documentos/userId_". $uid ."/factura_recibidas/";
     $storeFiles = HandlerFiles::store($request, $destination);
     $storeFiles->original['nombresArchivos'];     
     if (count($storeFiles->original['nombresArchivos']) > 0) {
@@ -115,13 +129,13 @@ class AlbaranController extends Controller
 
   public function getnviados(Request $request, $user_id = null){
     // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-    $effectiveUserId = \App\Helpers\GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = \App\Helpers\GestorHelper::getUserId($request);
     
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
     
-    $enviados = AlbaranesEnviado::with('cliente')->orderBy('created_at', 'DESC')->where('user_id', '=', $effectiveUserId)->get();     
+    $enviados = GestorHelper::applyUserIdScope(AlbaranesEnviado::query()->with('cliente'), $request)->orderBy('created_at', 'DESC')->get();     
     return response()->json(['status' => 200,'enviados' => $enviados]);
   }
 
@@ -129,7 +143,7 @@ class AlbaranController extends Controller
   public function albaranesEnviadosF(Request $request){ 
     try{
       // Usar GestorHelper para obtener el user_id correcto
-      $userLoggedId = \App\Helpers\GestorHelper::getUserId($request, Auth::id());
+      $userLoggedId = \App\Helpers\GestorHelper::getUserId($request);
       if (!$userLoggedId) {
         return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
       }
@@ -371,7 +385,11 @@ class AlbaranController extends Controller
     $nroFact = null;
     $Anio = AnioFiscal::latest()->first();
     try {
-      $userLoged = User::where('id',$request->user_id)->first();
+      $uid = GestorHelper::getUserId($request);
+      if (!$uid) {
+        return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+      }
+      $userLoged = User::where('id', $uid)->first();
 
       $factura =  NroFactura::where(['user_id' => Auth::user()->id])->max('nro_factura');
       $valorFactura = (1*$factura + 1*1);  
@@ -381,7 +399,7 @@ class AlbaranController extends Controller
       DB::beginTransaction();
       
       $recibo = new Recibo;
-      $recibo->user_id = $request->user_id;
+      $recibo->user_id = $uid;
       $recibo->cliente_id = $request->cliente_id;
       $recibo->fecha = date('Y-m-d');
       $recibo->sub_total = $this->parseHelper->parseEuroNumber($request->sub_total);
@@ -393,7 +411,7 @@ class AlbaranController extends Controller
       $recibo->factura_url = 'FACTURA_' . $nroFactura. '.pdf';
       $recibo->save();
 
-      $this->saveReciboServicios($recibo, $request->servicios, $request->user_id);
+      $this->saveReciboServicios($recibo, $request->servicios, $uid);
 
       $recibo->load('servicios', 'servicios.Servicio', 'cliente');
 
@@ -423,8 +441,8 @@ class AlbaranController extends Controller
       ];
 
       // Create directories if they don't exist
-      $recibosPath = storage_path('app/public/recibos/userId_'. $request->user_id.'/');
-      $facturasPath = storage_path('app/public/documentos/userId_'. $request->user_id . '/factura/');
+      $recibosPath = storage_path('app/public/recibos/userId_'. $uid.'/');
+      $facturasPath = storage_path('app/public/documentos/userId_'. $uid . '/factura/');
       
       if (!file_exists($recibosPath)) {
           mkdir($recibosPath, 0755, true);
@@ -475,7 +493,11 @@ class AlbaranController extends Controller
   // Generar nota
   public function generarNota(Request $request){
     try{
-      $userLoged = User::where('id',$request->user_id)->first();
+      $uid = GestorHelper::getUserId($request);
+      if (!$uid) {
+        return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+      }
+      $userLoged = User::where('id', $uid)->first();
 
       $Countfacturas = (1*count(NroNota::get()) + 1*1);
       $strNr = Basic::completarConCero($Countfacturas, 4);
@@ -484,7 +506,7 @@ class AlbaranController extends Controller
       DB::beginTransaction();
 
       $recibo = new Recibo;
-      $recibo->user_id = $request->user_id;
+      $recibo->user_id = $uid;
       $recibo->cliente_id = $request->cliente_id;
       $recibo->fecha = $request->fecha;
       $recibo->sub_total = $this->parseHelper->parseEuroNumber($request->sub_total);
@@ -496,7 +518,7 @@ class AlbaranController extends Controller
       $recibo->nota_url = 'NOTA_'. $nroNota. '.pdf';
       $recibo->save();
 
-      $this->saveReciboServicios($recibo, $request->servicios, $request->user_id);
+      $this->saveReciboServicios($recibo, $request->servicios, $uid);
 
       $saveJsonAlbaran = AlbaranesEnviado::findOrFail(1*$request->albaran_id);
       $saveJsonAlbaran->json_recibo = json_encode($recibo);

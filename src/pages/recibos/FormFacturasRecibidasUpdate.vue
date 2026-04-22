@@ -379,6 +379,7 @@
 
 <script>
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import { format_precio_autofactura } from "@/utils/format_precio.js";
 
 export default {
@@ -462,7 +463,6 @@ export default {
         let u = window.location.href;
         let splithash = u.split("/");
 
-        this.facturaRec.user_id = this.effectiveUserId;
         this.getProveedores();
         await this.getRetenciones();
         this.getArrayIva();
@@ -541,9 +541,6 @@ export default {
             axios.get(`api/facturas-recibidas-show/` + id).then(
                 (res) => {
                     this.facturaRec = res.data.success;
-                    if (!this.facturaRec?.user_id) {
-                        this.facturaRec.user_id = this.effectiveUserId;
-                    }
                     this.facturaRec.contabilizado = !!this.facturaRec.contabilizado;
                     if (this.facturaRec.imagen != null) {
                         JSON.parse(this.facturaRec.imagen);
@@ -557,7 +554,7 @@ export default {
         },
 
         getProveedores() {
-            axios.get(`api/get-proveedores/` + this.facturaRec.user_id).then(
+            axios.get(`api/get-proveedores`).then(
                 (res) => {
                     this.proveedores = res.data;
                 },
@@ -582,7 +579,6 @@ export default {
             axios
                 .get(`api/facturas-recibidas-pdf/${this.facturaRec.id}`, {
                     params: {
-                        user_id: this.effectiveUserId,
                         _t: Date.now(),
                     },
                     responseType: "blob",
@@ -635,7 +631,6 @@ export default {
                     `api/facturas-recibidas-resumen-liquidacion-pdf/${this.facturaRec.id}`,
                     {
                         params: {
-                            user_id: this.effectiveUserId,
                             _t: Date.now(),
                         },
                         responseType: "blob",
@@ -678,7 +673,6 @@ export default {
             let formData = new FormData();
 
             formData.append("id", this.facturaRec.id);
-            formData.append("user_id", this.facturaRec.user_id);
             formData.append("fecha", this.facturaRec.fecha);
             formData.append("descripcion", this.facturaRec.descripcion);
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
@@ -729,7 +723,6 @@ export default {
                 this.servicio_dialog = {
                     descripcion: this.servicio.concepto,
                     precio: this.servicio.precio,
-                    user_id: localStorage.getItem("user_id"),
                     venta: 0,
                 };
                 return;*/
@@ -873,16 +866,8 @@ export default {
         errors() {
             return this.$store.getters.geterrors;
         },
-        userID() {
-            return localStorage.user_id;
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
     },
 

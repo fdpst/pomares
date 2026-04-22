@@ -13,22 +13,20 @@ class MorososController extends Controller
     public function getMorosos(Request $request, $user_id = null)
     {
         // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
         // Solo facturas (NroFactura): los albaranes/notas no deben aparecer como pendientes de pago.
-        // Filtro doble: Deuda.user_id y Recibo.user_id para garantizar que solo se muestren
-        // pendientes del cliente/empresa correcto y no se crucen datos entre usuarios.
-        $morosos = Deuda::where('user_id', '=', $effectiveUserId)
+        $morosos = GestorHelper::applyUserIdScope(Deuda::query(), $request)
             ->with('deuda.recibo.cliente')
             ->whereColumn('total', '>', 'pagado')
             ->where('deuda_type', 'App\Models\NroFactura')
-            ->whereHas('deuda', function ($q) use ($effectiveUserId) {
-                $q->whereHas('recibo', function ($q2) use ($effectiveUserId) {
-                    $q2->where('user_id', $effectiveUserId);
+            ->whereHas('deuda', function ($q) use ($request) {
+                $q->whereHas('recibo', function ($q2) use ($request) {
+                    GestorHelper::applyUserIdScope($q2, $request);
                 });
             })
             ->orderBy('created_at', 'DESC')
@@ -43,7 +41,7 @@ class MorososController extends Controller
      */
     public function getFacturaPendienteInfo(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->query('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -59,27 +57,27 @@ class MorososController extends Controller
         $numero = ltrim((string) $identi, '0') ?: '0';
         $esFactura = in_array(strtolower($tipo), ['factura', 'fac'], true);
 
-        $baseQuery = Deuda::where('user_id', $effectiveUserId)
+        $baseQuery = GestorHelper::applyUserIdScope(Deuda::query(), $request)
             ->whereColumn('total', '>', 'pagado')
             ->with('deuda.recibo.cliente');
 
         if ($esFactura) {
             $deuda = (clone $baseQuery)
                 ->where('deuda_type', 'App\Models\NroFactura')
-                ->whereHasMorph('deuda', ['App\Models\NroFactura'], function ($q) use ($numero, $effectiveUserId) {
+                ->whereHasMorph('deuda', ['App\Models\NroFactura'], function ($q) use ($numero, $request) {
                     $q->where('nro_factura', $numero)
-                        ->whereHas('recibo', function ($q2) use ($effectiveUserId) {
-                            $q2->where('user_id', $effectiveUserId);
+                        ->whereHas('recibo', function ($q2) use ($request) {
+                            GestorHelper::applyUserIdScope($q2, $request);
                         });
                 })
                 ->first();
         } else {
             $deuda = (clone $baseQuery)
                 ->where('deuda_type', 'App\Models\NroNota')
-                ->whereHasMorph('deuda', ['App\Models\NroNota'], function ($q) use ($numero, $effectiveUserId) {
+                ->whereHasMorph('deuda', ['App\Models\NroNota'], function ($q) use ($numero, $request) {
                     $q->where('nro_nota', $numero)
-                        ->whereHas('recibo', function ($q2) use ($effectiveUserId) {
-                            $q2->where('user_id', $effectiveUserId);
+                        ->whereHas('recibo', function ($q2) use ($request) {
+                            GestorHelper::applyUserIdScope($q2, $request);
                         });
                 })
                 ->first();
@@ -91,7 +89,7 @@ class MorososController extends Controller
 
         // Asegurar filtro por user_id del recibo (gestor puede ver otro cliente)
         $recibo = $deuda->deuda->recibo ?? null;
-        if (!$recibo || (int) $recibo->user_id !== (int) $effectiveUserId) {
+        if (!$recibo || !\App\Helpers\GestorHelper::ownsUserIdRow($request, $recibo->user_id)) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 

@@ -450,7 +450,6 @@ export default {
         localidad: "",
         id_provincia: null,
         cuenta: "",
-        user_id: localStorage.getItem("user_id"),
         nro_proveedor: null,
       },
       catalogoFormasPago: [],
@@ -498,7 +497,6 @@ export default {
   },
 
   created() {
-    this.proveedor.user_id = this.effectiveUserId;
     if (this.$route.query.id) {
       this.getProveedorById(this.$route.query.id);
     } else {
@@ -534,7 +532,6 @@ export default {
       axios
         .post("api/catalogo-formas-pago", {
           descripcion: d,
-          user_id: this.effectiveUserId,
         })
         .then(() => {
           this.nuevaFormaDescripcion = "";
@@ -562,7 +559,6 @@ export default {
       axios
         .put(`api/catalogo-formas-pago/${this.formaEditId}`, {
           descripcion: d,
-          user_id: this.effectiveUserId,
         })
         .then(() => {
           this.dialogEditarForma = false;
@@ -600,7 +596,6 @@ export default {
       this.formaPendienteBorrar = null;
     },
     onClienteChanged() {
-      this.proveedor.user_id = this.effectiveUserId;
       this.getProvincias();
       this.getCuentas();
       this.cargarArticulosCompra();
@@ -671,7 +666,6 @@ export default {
         servicio_id: this.formComision.servicio_id,
         tipo: this.formComision.tipo,
         valor: v,
-        user_id: this.effectiveUserId,
       };
       if (this.comisionEditId) {
         axios
@@ -737,7 +731,6 @@ export default {
       );
     },
     saveProveedor() {
-      this.proveedor.user_id = this.effectiveUserId;
       axios.post("api/save-proveedor", this.proveedor).then(
         (res) => {
           $toast.sucs("Punto de venta guardado con éxito");
@@ -806,14 +799,6 @@ export default {
 
     errors() {
       return this.$store.getters.geterrors;
-    },
-    effectiveUserId() {
-      const role = parseInt(localStorage.getItem("role"), 10);
-      const selectedCliente = localStorage.getItem("selected_cliente_id");
-      if (role === 3 && selectedCliente) {
-        return selectedCliente;
-      }
-      return localStorage.getItem("user_id");
     },
     serviciosComisionDisponibles() {
       const usados = new Set(

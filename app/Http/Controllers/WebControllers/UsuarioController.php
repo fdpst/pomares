@@ -25,7 +25,7 @@ class UsuarioController extends Controller
         'telefono'     => $request->telefono,
         'provincia_id' => $request->provincia_id,
         'password'     => bcrypt(Str::random(10)),
-        'role'         => 2
+        'role'         => 1
       ]);
 
       if($user){

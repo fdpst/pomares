@@ -10,7 +10,6 @@ const modulo_clientes = {
             hasMorePages: true, // ✅ Añadir control de páginas disponibles
             isSearching: false, // ✅ Añadir estado de búsqueda
             searchTerm: "", // ✅ Guardar término de búsqueda actual
-            userId: localStorage.getItem("user_id"),
         };
     },
 

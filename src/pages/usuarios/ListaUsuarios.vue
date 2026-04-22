@@ -218,10 +218,6 @@ export default {
                     value: "email",
                 },
                 {
-                    title: "Perfil",
-                    value: "role_str",
-                },
-                {
                     title: "Fecha",
                     value: "created_at",
                 },

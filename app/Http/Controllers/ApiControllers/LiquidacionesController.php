@@ -31,10 +31,10 @@ class LiquidacionesController extends Controller
             ]);
         }
 
-        $liquidaciones = Liquidacion::orderBy('id', 'desc')
-            ->with('proveedor')
-            ->where('user_id', $effectiveUserId)
-            ->get();
+        $liquidaciones = GestorHelper::applyUserIdScope(
+            Liquidacion::orderBy('id', 'desc')->with('proveedor'),
+            $request
+        )->get();
 
         return response()->json([
             'status' => 200,
@@ -44,7 +44,7 @@ class LiquidacionesController extends Controller
 
     public function store(LiquidacionRequest $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -106,10 +106,9 @@ class LiquidacionesController extends Controller
     public function update(Request $request, $id)
     {
         $liqU = Liquidacion::findOrFail($id);
-        $fallbackUserId = $request->user_id ?? $liqU->user_id;
-        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
-        if (!$effectiveUserId) {
+        if (!$effectiveUserId || !\App\Helpers\GestorHelper::ownsUserIdRow($request, $liqU->user_id)) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
@@ -196,9 +195,17 @@ class LiquidacionesController extends Controller
         LiquidacionItem::where('liquidacion_id', $liquidacion->id)->whereNotIn('id', $ids)->delete();
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        Liquidacion::find($id)?->delete();
+        $effectiveUserId = GestorHelper::getUserId($request);
+        if (!$effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+        $liq = GestorHelper::applyUserIdScope(Liquidacion::query()->where('id', $id), $request)->first();
+        if (!$liq) {
+            return response()->json(['error' => 'Liquidación no encontrada'], 404);
+        }
+        $liq->delete();
 
         return response()->json([
             'message' => 'Delete Successfully',
@@ -229,12 +236,17 @@ class LiquidacionesController extends Controller
     public function duplicarLiquidacion(Request $request)
     {
         try {
+            $effectiveUserId = GestorHelper::getUserId($request);
+            if (!$effectiveUserId) {
+                return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+            }
+
             $origen = Liquidacion::with(['items'])->find($request->id);
-            if (!$origen) {
+            if (!$origen || !\App\Helpers\GestorHelper::ownsUserIdRow($request, $origen->user_id)) {
                 return response()->json(['error' => 'Liquidación no encontrada'], 404);
             }
 
-            $uidDup = (int) ($request->user_id ?? $origen->user_id);
+            $uidDup = (int) $effectiveUserId;
 
             $duplicada = Liquidacion::create([
                 'fecha' => $request->fecha ?? $origen->fecha,
@@ -280,7 +292,7 @@ class LiquidacionesController extends Controller
      */
     public function crearFacturaComisiones(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -297,9 +309,10 @@ class LiquidacionesController extends Controller
 
         $ids = array_values(array_unique(array_map('intval', $request->liquidacion_ids)));
 
-        $liquidaciones = Liquidacion::with(['items'])
-            ->where('user_id', $effectiveUserId)
-            ->whereIn('id', $ids)
+        $liquidaciones = GestorHelper::applyUserIdScope(
+            Liquidacion::with(['items'])->whereIn('id', $ids),
+            $request
+        )
             ->get()
             ->sortBy('id')
             ->values();
@@ -334,7 +347,7 @@ class LiquidacionesController extends Controller
 
                 $lineas = [];
                 foreach ($liqsGrupo as $liq) {
-                    $desglose = $this->desgloseComisionLiquidacion($liq, $effectiveUserId);
+                    $desglose = $this->desgloseComisionLiquidacion($liq);
                     if ($desglose === null) {
                         $omitidas[] = [
                             'liquidacion_id' => $liq->id,
@@ -436,9 +449,10 @@ class LiquidacionesController extends Controller
                 }
 
                 $idOrder = collect($lineas)->map(fn ($ln) => (int) $ln['liquidacion']->id)->unique()->values()->all();
-                $byId = Liquidacion::with(['items.servicio', 'proveedor'])
-                    ->where('user_id', $effectiveUserId)
-                    ->whereIn('id', $idOrder)
+                $byId = GestorHelper::applyUserIdScope(
+                    Liquidacion::with(['items.servicio', 'proveedor'])->whereIn('id', $idOrder),
+                    $request
+                )
                     ->get()
                     ->keyBy('id');
                 $liqsOrdered = collect($idOrder)->map(fn ($id) => $byId->get($id))->filter();
@@ -492,10 +506,10 @@ class LiquidacionesController extends Controller
      * Desglose de comisiones por liquidación: cantidad = suma de unidades con comisión;
      * precio = comisión neta unitaria media; IVA 21%; total línea = neto + cuota.
      */
-    private function desgloseComisionLiquidacion(Liquidacion $liq, $userId): ?array
+    private function desgloseComisionLiquidacion(Liquidacion $liq): ?array
     {
         $comisiones = ProveedorComision::where('proveedor_id', $liq->proveedor_id)
-            ->where('user_id', $userId)
+            ->where('user_id', (int) $liq->user_id)
             ->get()
             ->keyBy(fn ($c) => (int) $c->servicio_id);
 

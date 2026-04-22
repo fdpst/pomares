@@ -257,6 +257,7 @@
 <script>
 import ConfirmDialogVue from "@/components/ConfirmDialog.vue";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import RichTextComponent from "./RichTextComponent.vue";
 import emailContentDialog from "./emailContentDialog.vue";
 
@@ -566,16 +567,8 @@ export default {
         },
     },
     computed: {
-        user_id() {
-            return localStorage.getItem("user_id");
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return this.user_id;
+            return effectiveBusinessUserId();
         },
         facturas: function () {
             let facturas = this.facturas_items;

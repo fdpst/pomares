@@ -58,6 +58,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Datos compartidos entre administradores (mismo user_id en consultas)
+    |--------------------------------------------------------------------------
+    |
+    | Si defines APP_SHARED_DATA_USER_ID con el id numérico del usuario que
+    | ya tiene los datos (p. ej. el primero), todos los usuarios autenticados
+    | listarán y guardarán usando ese user_id (sin lógica por rol en el helper).
+    |
+    */
+
+    'shared_data_user_id' => env('APP_SHARED_DATA_USER_ID'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Aislamiento por user_id en consultas API
+    |--------------------------------------------------------------------------
+    |
+    | false (por defecto): listados y ediciones no filtran por el user_id de la fila;
+    |        cualquier usuario autenticado ve datos guardados por otros.
+    | true: se filtra y se comprueba pertenencia con GestorHelper::getUserId().
+    |
+    */
+
+    'restrict_queries_by_owner_user_id' => env('APP_RESTRICT_QUERIES_BY_OWNER_USER_ID', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

@@ -105,6 +105,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('delete-servicio/{id}', 'ServicioController@deleteServicio');
   Route::get('servicio/numero/{venta}', 'ServicioController@getLastNumber');
   /*Rutas Albaranes*/
+  Route::get('get-albaranes', 'AlbaranController@getAlbaranes');
   Route::get('get-albaranes/{user_id}', 'AlbaranController@getAlbaranes');
   Route::get('get-albaran-by-id/{albaran_id}', 'AlbaranController@getAlbaranById');
   Route::post('save-albaran', 'AlbaranController@saveAlbaran');
@@ -187,7 +188,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::post('nota/mails', 'NotaController@SendLoteEmail');
 
   /*Rutas Parte Trabajo*/
+  Route::get('get-parte-trabajo', 'ParteTrabajoController@getParteTrabajo');
   Route::get('get-parte-trabajo/{user_id}', 'ParteTrabajoController@getParteTrabajo');
+  Route::get('get-presupuestos-for-parte-trabajo', 'ParteTrabajoController@getPrespuestos');
   Route::get('get-presupuestos-for-parte-trabajo/{user_id}', 'ParteTrabajoController@getPrespuestos');
   Route::get('get-presupuesto-asociado/{recibo_id}', 'ParteTrabajoController@getPresupuestoAsociado');
   Route::get('delete-parte-trabajo/{recibo_id}', 'ParteTrabajoController@deleteParteTrabajo');
@@ -225,6 +228,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('/get-anios-iva', 'ReporteIvaController@selectAnio');
 
   /*Rutas estadisticas*/
+  Route::get('get-ingreso-bruto', 'EstadisticasController@getIngresoBruto');
   Route::get('get-ingreso-bruto/{user_id}', 'EstadisticasController@getIngresoBruto');
 
   /*Rutas Morosos*/
@@ -241,6 +245,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('lote-facturas-get-url-download-zips', 'LoteController@getStorageUrlsEnviadasRecibidasYTodas');
 
   /*Rutas Gestor Documental*/
+  Route::get('get-documentos', 'GestorDocumentalController@getDocumentos');
   Route::get('get-documentos/{user_id}', 'GestorDocumentalController@getDocumentos');
   Route::post('delete-documentos', 'GestorDocumentalController@deleteDocument');
   Route::post('create-folder', 'GestorDocumentalController@createFolder');
@@ -250,8 +255,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('gestor-admin', 'GestorDocumentalController@adminGestionDocumental');
   Route::post('view-document', 'GestorDocumentalController@viewDocument');
 
+  Route::get('get-tasks', 'GestorTareasController@index');
   Route::get('get-tasks/{user_id}', 'GestorTareasController@index');
 
+  Route::post('new-drag', 'GestorTareasController@newDrag');
   Route::post('new-drag/{user_id}', 'GestorTareasController@newDrag');
   Route::put('update-drag/{drag_id}', 'GestorTareasController@updateDrag');
   Route::delete('delete-drag/{drag_id}', 'GestorTareasController@deleteDrag');

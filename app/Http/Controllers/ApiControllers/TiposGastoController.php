@@ -14,11 +14,11 @@ use App\Helpers\GestorHelper;
 class TiposGastoController extends Controller
 {
   public function getTiposGasto(Request $request, $user_id = null){
-    $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
     if (!$effectiveUserId) {
       return response()->json([], 200);
     }
-    $tiposGasto = TiposGasto::where('user_id', '=', $effectiveUserId)->orderBy('id', 'DESC')->get();
+    $tiposGasto = GestorHelper::applyUserIdScope(TiposGasto::query(), $request)->orderBy('id', 'DESC')->get();
     return response()->json($tiposGasto, 200);
   }
 
@@ -28,7 +28,7 @@ class TiposGastoController extends Controller
   }*/
 
   public function saveTiposGasto(Request $request){
-    $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
 
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -55,7 +55,7 @@ class TiposGastoController extends Controller
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
 
-    $tiposGasto = TiposGasto::where('id', $tipos_gasto_id)->where('user_id', $effectiveUserId)->first();
+    $tiposGasto = GestorHelper::applyUserIdScope(TiposGasto::query(), $request)->where('id', $tipos_gasto_id)->first();
     if (!$tiposGasto) {
       return response()->json(['error' => 'Tipo de gasto no encontrado'], 404);
     }

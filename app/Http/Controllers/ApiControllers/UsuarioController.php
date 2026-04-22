@@ -85,7 +85,7 @@ class UsuarioController extends Controller
     {
         // Si no viene user_id en la ruta, obtenerlo del helper (cliente_id si es gestor, o user_id del usuario autenticado)
         // Si viene user_id en la ruta, usar el helper para validar y obtener el correcto
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::resolveUserProfileId($request, $user_id);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -106,10 +106,10 @@ class UsuarioController extends Controller
         // Obtener IDs de asociaciones según el rol y agregarlos al array del usuario
         $userArray = $user->toArray();
 
-        if ($user->role == 2) {
-            // Si es cliente, obtener IDs de gestores asociados
+        if ((int) $user->role === 2 || $user->gestoresAsociados()->exists()) {
+            // Cliente histórico (role 2) o empresa con pivote aunque el rol esté normalizado a 1
             $userArray['gestores_ids'] = $user->gestoresAsociados()->get()->pluck('id')->toArray();
-        } elseif ($user->role == 3 || $user->role == 4) {
+        } elseif ($user->role == 3 || $user->role == 4 || $user->clientesAsociados()->exists()) {
             // Si es gestor o empleado, obtener IDs de clientes asociados
             $userArray['clientes_ids'] = $user->clientesAsociados()->get()->pluck('id')->toArray();
         }
@@ -156,6 +156,8 @@ class UsuarioController extends Controller
         try {
             $usuario = json_decode($request->usuario, true); // Decodificar como array para mejor manejo
 
+            $esEmpresaForm = !empty($usuario['es_empresa_form']);
+
             // Verificar si es un nuevo usuario o una actualización
             $id = $usuario['id'] ?? null;
 
@@ -185,18 +187,25 @@ class UsuarioController extends Controller
             // Convertir de array a objeto para compatibilidad con el resto del código
             $usuario = (object) $usuario;
 
+            $perfilEmpresa = ((int) ($usuario->role ?? 0) === 2) || $esEmpresaForm;
+            if (! $isNewUser && $user->getKey()) {
+                $perfilEmpresa = $perfilEmpresa
+                    || ((int) $user->role === 2)
+                    || $user->gestoresAsociados()->exists();
+            }
+
             $user->name = $usuario->name;
             $user->role = $usuario->role;
 
-            // Para empresa (role 2) nueva: email se asigna después del save como id@fidifactu.com
-            if ($usuario->role == 2 && $isNewUser) {
+            // Empresa (role 2 o alta desde formulario empresa): email provisional hasta el save
+            if ($perfilEmpresa && $isNewUser) {
                 $user->email = 'temp-' . uniqid() . '@fidifactu.com'; // temporal único para cumplir unique antes del save
             } else {
                 $user->email = $usuario->email;
             }
 
-            // Solo asignar campos adicionales si es cliente (role 2)
-            if ($usuario->role == 2) {
+            // Campos de ficha empresa (antes ligados solo a role 2)
+            if ($perfilEmpresa) {
                 $user->provincia_id = $usuario->provincia_id ?? null;
                 $user->nombre_fiscal = $usuario->nombre_fiscal ?? null;
                 $user->cif = $usuario->cif ?? null;
@@ -236,14 +245,14 @@ class UsuarioController extends Controller
 
             $user->saveOrFail();
 
-            // Para empresa (role 2) nueva: asignar email definitivo id@fidifactu.com
-            if ($usuario->role == 2 && $isNewUser) {
+            // Empresa nueva: email definitivo id@fidifactu.com
+            if ($perfilEmpresa && $isNewUser) {
                 $user->email = $user->id . '@fidifactu.com';
                 $user->save();
             }
 
             // Guardar asociaciones gestor-clientes
-            if (isset($usuario->gestores_ids) && $usuario->role == 2) {
+            if (isset($usuario->gestores_ids) && $perfilEmpresa) {
                 // Si es cliente, asociar gestores
                 $user->gestoresAsociados()->sync($usuario->gestores_ids);
             } elseif (isset($usuario->clientes_ids) && ($usuario->role == 3 || $usuario->role == 4)) {
@@ -256,7 +265,7 @@ class UsuarioController extends Controller
             $email = $user->email;
 
             // Email con contraseña solo si se generó automáticamente (no si el alta la definió a mano)
-            if ($isNewUser && $usuario->role != 2 && $plainPasswordForEmail !== null) {
+            if ($isNewUser && !$perfilEmpresa && $plainPasswordForEmail !== null) {
                 try {
                     Mail::to($email)->send(new NewUserMail($user, $plainPasswordForEmail));
                 } catch (\Throwable $e) {
@@ -355,7 +364,7 @@ class UsuarioController extends Controller
     {
         // Si no viene id en la ruta, obtenerlo del helper (cliente_id si es gestor, o user_id del usuario autenticado)
         // Si viene id en la ruta, usar el helper para validar y obtener el correcto
-        $effectiveUserId = GestorHelper::getUserId($request, $id);
+        $effectiveUserId = GestorHelper::resolveUserProfileId($request, $id);
 
         if (!$effectiveUserId || $effectiveUserId === 'null' || $effectiveUserId === 'undefined') {
             return response()->json(['error' => 'No tiene acceso a este recurso o ID inválido'], 403);
@@ -368,16 +377,32 @@ class UsuarioController extends Controller
         }
 
         $usuario = json_decode($request->usuario, true);
+        if (! is_array($usuario)) {
+            return response()->json(['error' => 'Payload de usuario inválido'], 400);
+        }
+
+        // Cargar primero el usuario persistido: las empresas pueden tener role 1 con pivote gestor_clientes
+        $user = User::findOrFail($effectiveUserId);
+
+        $perfilEmpresa = ((int) ($usuario['role'] ?? 0) === 2)
+            || ! empty($usuario['es_empresa_form'])
+            || ((int) $user->role === 2)
+            || $user->gestoresAsociados()->exists();
 
         if ($request->isMethod("POST")) {
-            // Usar el effectiveUserId en lugar del id de la ruta
-            $user = User::findOrFail($effectiveUserId);
+            // $user ya resuelto arriba
             $user->name = $usuario['name'];
-            $user->email = $usuario['email'];
+            if ($perfilEmpresa) {
+                if (!empty($usuario['email'])) {
+                    $user->email = $usuario['email'];
+                }
+            } else {
+                $user->email = $usuario['email'];
+            }
             $user->role = $usuario['role'];
 
-            // Solo actualizar campos adicionales si es cliente (role 2)
-            if ($usuario['role'] == 2) {
+            // Campos de ficha empresa (antes ligados solo a role 2)
+            if ($perfilEmpresa) {
                 $user->provincia_id = $usuario['provincia_id'] ?? null;
                 $user->nombre_fiscal = $usuario['nombre_fiscal'] ?? null;
                 $user->cif = $usuario['cif'] ?? null;
@@ -406,7 +431,7 @@ class UsuarioController extends Controller
             $user->update();
 
             // Actualizar asociaciones gestor-clientes
-            if (isset($usuario['gestores_ids']) && $usuario['role'] == 2) {
+            if (isset($usuario['gestores_ids']) && $perfilEmpresa) {
                 // Si es cliente, actualizar gestores asociados
                 $user->gestoresAsociados()->sync($usuario['gestores_ids']);
             } elseif (isset($usuario['clientes_ids']) && ($usuario['role'] == 3 || $usuario['role'] == 4)) {
@@ -541,7 +566,8 @@ class UsuarioController extends Controller
     // Obtener lista de gestores (para asociar a clientes)
     public function getGestores()
     {
-        $gestores = User::where('role', 3)
+        // Tras normalizar roles a 1, se devuelve el listado completo para selects legacy.
+        $gestores = User::query()
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
@@ -555,7 +581,7 @@ class UsuarioController extends Controller
     // Obtener lista de clientes (para asociar a gestores)
     public function getClientes()
     {
-        $clientes = User::where('role', 2)
+        $clientes = User::query()
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 

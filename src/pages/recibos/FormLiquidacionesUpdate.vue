@@ -481,6 +481,7 @@
 
 <script>
 import { formatPrice } from "@/@core/utils/formatters";
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
 
 /** IVA 21 % sobre la base de comisiones: resumen del formulario y facturas recibidas (LiquidacionesController::desgloseComisionLiquidacion). */
@@ -578,7 +579,6 @@ export default {
         let u = window.location.href;
         let splithash = u.split("/");
 
-        this.facturaRec.user_id = this.effectiveUserId;
         this.getProveedores();
 
         //id factura splithash[splithash.length -1]
@@ -710,9 +710,6 @@ export default {
                     if (this.facturaRec.descripcion == null) {
                         this.facturaRec.descripcion = "";
                     }
-                    if (!this.facturaRec?.user_id) {
-                        this.facturaRec.user_id = this.effectiveUserId;
-                    }
                     if (this.facturaRec.imagen != null) {
                         JSON.parse(this.facturaRec.imagen);
                     }
@@ -726,7 +723,7 @@ export default {
         },
 
         getProveedores() {
-            axios.get(`api/get-proveedores/` + this.facturaRec.user_id).then(
+            axios.get(`api/get-proveedores`).then(
                 (res) => {
                     this.proveedores = res.data;
                 },
@@ -764,7 +761,6 @@ export default {
             let formData = new FormData();
 
             formData.append("id", this.facturaRec.id);
-            formData.append("user_id", this.facturaRec.user_id);
             formData.append("fecha", this.facturaRec.fecha);
             formData.append(
                 "descripcion",
@@ -833,7 +829,6 @@ export default {
                 this.servicio_dialog = {
                     descripcion: this.servicio.concepto,
                     precio: this.servicio.precio,
-                    user_id: localStorage.getItem("user_id"),
                     venta: 0,
                 };
                 return;*/
@@ -929,7 +924,6 @@ export default {
             let formData = new FormData();
 
             formData.append("id", this.facturaRec.id);
-            formData.append("user_id", this.facturaRec.user_id);
             formData.append("fecha", this.facturaRec.fecha);
             formData.append(
                 "descripcion",
@@ -971,16 +965,8 @@ export default {
         errors() {
             return this.$store.getters.geterrors;
         },
-        userID() {
-            return localStorage.user_id;
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
         deduccionesComisionLines() {
             const lines = this.facturaRec.items || [];

@@ -14,44 +14,44 @@ use App\Helpers\GestorHelper;
 
 class EstadisticasController extends Controller
 {
-  public function getIngresoBruto(Request $request, $user_id)
+  public function getIngresoBruto(Request $request, $user_id = null)
   {
     // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-    $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
 
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
 
     if ($request->has(['desde', 'hasta'])) {
-      $suma_gastos = Gasto::whereBetween('created_at', [$request->desde, $request->hasta])
-        ->where('user_id', '=', $effectiveUserId)
+      $suma_gastos = GestorHelper::applyUserIdScope(Gasto::query(), $request)
+        ->whereBetween('created_at', [$request->desde, $request->hasta])
         ->sum('importe');
 
-      $tiposGasto = TiposGasto::where('user_id', '=', $effectiveUserId)->orderBy('id', 'DESC')->get();
+      $tiposGasto = GestorHelper::applyUserIdScope(TiposGasto::query(), $request)->orderBy('id', 'DESC')->get();
       $suma_gastos_desglosado = array();
       foreach ($tiposGasto as $tipoGasto) {
-        $suma_gastos_desglosado[$tipoGasto->nombre] = Gasto::where('tipo_id', $tipoGasto->id)
-          ->where('user_id', '=', $effectiveUserId)
+        $suma_gastos_desglosado[$tipoGasto->nombre] = GestorHelper::applyUserIdScope(Gasto::query(), $request)
+          ->where('tipo_id', $tipoGasto->id)
           ->whereBetween('created_at', [$request->desde, $request->hasta])
           ->sum('importe');
       }
 
-      $suma_ingresos = Ingreso::whereBetween('created_at', [$request->desde, $request->hasta])
-        ->where('user_id', '=', $effectiveUserId)
+      $suma_ingresos = GestorHelper::applyUserIdScope(Ingreso::query(), $request)
+        ->whereBetween('created_at', [$request->desde, $request->hasta])
         ->sum('importe');
 
-      $suma_deuda = Deuda::whereBetween('created_at', [$request->desde, $request->hasta])
-        ->where('user_id', '=', $effectiveUserId)
+      $suma_deuda = GestorHelper::applyUserIdScope(Deuda::query(), $request)
+        ->whereBetween('created_at', [$request->desde, $request->hasta])
         ->select(DB::raw('sum(total - pagado) as total'))
         ->get();
 
       $deudaTotal = $suma_deuda[0]['total'] ? $suma_deuda[0]['total'] : 0;
       /////////////////////////////////////////////////////////////////////////////////////
-      $gastos = Gasto::whereBetween('created_at', [$request->desde, $request->hasta])->where('user_id', '=', $effectiveUserId)->get();
-      $ingresos = Ingreso::whereBetween('created_at', [$request->desde, $request->hasta])->where('user_id', '=', $effectiveUserId)->get();
-      //$deuda = Deuda::whereBetween('created_at', [$request->desde, $request->hasta])->where('user_id', '=', $effectiveUserId)->select(DB::raw('sum(total - pagado) as total'))->get();
-      $deudas = Deuda::whereBetween('created_at', [$request->desde, $request->hasta])->where('user_id', '=', $effectiveUserId)->get();
+      $gastos = GestorHelper::applyUserIdScope(Gasto::query(), $request)->whereBetween('created_at', [$request->desde, $request->hasta])->get();
+      $ingresos = GestorHelper::applyUserIdScope(Ingreso::query(), $request)->whereBetween('created_at', [$request->desde, $request->hasta])->get();
+      //$deuda = Deuda::whereBetween('created_at', [$request->desde, $request->hasta])->when(\App\Helpers\GestorHelper::restrictQueriesByOwnerUserId(), function ($q) use ($request) { return $q->where('user_id', \App\Helpers\GestorHelper::getUserId($request)); })->select(DB::raw('sum(total - pagado) as total'))->get();
+      $deudas = GestorHelper::applyUserIdScope(Deuda::query(), $request)->whereBetween('created_at', [$request->desde, $request->hasta])->get();
       //consultamos los proyectos en el intervalo de tiempo pedido
       //$proyectos = Proyecto::whereBetween('fecha_alta', [$desde, $hasta])->get();
       //tomamos el valor numerico de los meses

@@ -108,8 +108,7 @@
 
         this.form.tipo_factura = this.modelFactura
 
-        const effectiveUserId = this.getEffectiveUserId();
-        axios.post(`api/enviar-lote-facturas/${effectiveUserId}`, {
+        axios.post(`api/enviar-lote-facturas`, {
           form : this.form
         }).then(res => {
           $toast.sucs('Email enviado con exito')
@@ -126,14 +125,6 @@
 
       closeDialog() {
         this.$emit('close_dialog')
-      },
-      getEffectiveUserId() {
-        const role = parseInt(localStorage.getItem("role"));
-        const selectedCliente = localStorage.getItem("selected_cliente_id");
-        if (role === 3 && selectedCliente) {
-          return selectedCliente;
-        }
-        return localStorage.getItem("user_id");
       },
     },
     computed : {

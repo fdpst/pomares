@@ -144,7 +144,7 @@ class SystemParamController extends Controller
     public function getByParamName(Request $request, string $name)
     {
         try {
-            $businessId = GestorHelper::getUserId($request, Auth::id());
+            $businessId = GestorHelper::getUserId($request);
 
             if (!$businessId) {
                 throw new \Exception("not allowed", 403);

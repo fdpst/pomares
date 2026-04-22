@@ -571,7 +571,12 @@ export default {
                 UploadFilesService.validateUploadedFile(fileSave);
                 formDataUpdate.append("imagen[]", fileSave);
             }
-            formDataUpdate.append("usuario", JSON.stringify(this.usuario));
+            // Misma señal que FormUsuarios (usuarioJsonForApi): sin esto, role 1 + pivote empresa
+            // hacía que el backend interpretara "no empresa" y borrara nombre_fiscal, cif, etc.
+            formDataUpdate.append(
+                "usuario",
+                JSON.stringify({ ...this.usuario, es_empresa_form: true })
+            );
             formDataUpdate.append("existeDatosEmpres", true);
 
             // No pasar el id en la URL, el backend lo determinará automáticamente
@@ -649,9 +654,6 @@ export default {
         },
         uri() {
             return window.location.origin;
-        },
-        idUser() {
-            return localStorage.user_id;
         },
     },
 };

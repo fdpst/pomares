@@ -8,7 +8,7 @@
             <VForm ref="formValid" v-model="formValid">
                 <!-- avatar -->
                 <VRow
-                    v-if="type === 'usuario' || usuario.role == 2 || !usuario.role"
+                    v-if="type === 'usuario' || isEmpresaForm || !usuario.role"
                     dense>
                     <VCol cols="12" align="center">
                         <VAvatar
@@ -198,7 +198,7 @@
                             :rules="[rules.required]"
                         ></VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -210,10 +210,10 @@
                             v-model="usuario.nombre_fiscal"
                             label="Nombre Fiscal"
                             placeholder="Nombre Fiscal"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                         ></VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -223,11 +223,11 @@
                             v-model="usuario.cif"
                             label="CIF"
                             placeholder="CIF"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                         ></VTextField>
                     </VCol>
                     <!-- Email: solo visible para usuarios (gestores, empleados, admin); en empresa no se muestra -->
-                    <VCol v-if="usuario.role != 2" cols="12" md="4">
+                    <VCol v-if="!isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -242,7 +242,7 @@
                             :rules="[rules.required, rules.email]"
                         ></VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -256,7 +256,7 @@
                             placeholder="Email comercial"
                         ></VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -267,7 +267,7 @@
                             "
                             v-model="usuario.telefono"
                             :rules="
-                                usuario.role == 2
+                                isEmpresaForm
                                     ? [rules.required, rules.number_rule]
                                     : []
                             "
@@ -278,25 +278,7 @@
                         >
                         </VTextField>
                     </VCol>
-                    <VCol cols="12" md="4">
-                        <VSelect
-                            density="compact"
-                            variant="outlined"
-                            :error-messages="
-                                errors.errors.role
-                                    ? errors.errors.role[0]
-                                    : null
-                            "
-                            :items="rolesFiltered"
-                            item-value="id"
-                            item-title="role"
-                            label="Seleccione un Perfil"
-                            v-model="usuario.role"
-                            :rules="[rules.required]"
-                        >
-                        </VSelect>
-                    </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -307,11 +289,11 @@
                             "
                             label="Direccion"
                             v-model="usuario.direccion"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                         >
                         </VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -323,19 +305,19 @@
                             v-model="usuario.ciudad"
                             label="Localidad"
                             :counter="60"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                         ></VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="4">
+                    <VCol v-if="isEmpresaForm" cols="12" md="4">
                         <VTextField
                             variant="outlined"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                             v-model="usuario.postal_code"
                             label="Código postal"
                             required
                         />
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="4" md="4">
+                    <VCol v-if="isEmpresaForm" cols="4" md="4">
                         <VSelect
                             density="compact"
                             variant="outlined"
@@ -349,11 +331,11 @@
                             item-title="nombre"
                             label="Provincia"
                             v-model="usuario.provincia_id"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                         >
                         </VSelect>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12" md="8">
+                    <VCol v-if="isEmpresaForm" cols="12" md="8">
                         <VTextField
                             density="compact"
                             variant="outlined"
@@ -364,17 +346,17 @@
                             "
                             v-model="usuario.cuenta"
                             label="Cuenta Bancaria"
-                            :rules="usuario.role == 2 ? [rules.required] : []"
+                            :rules="isEmpresaForm ? [rules.required] : []"
                         ></VTextField>
                     </VCol>
-                    <VCol v-if="usuario.role == 2" cols="12">
+                    <VCol v-if="isEmpresaForm" cols="12">
                         <VCheckbox
                             v-model="usuario.has_electronic_billing"
                             label="¿Tiene facturación electrónica?"
                         />
                     </VCol>
                     <!-- Campo para asociar gestores a clientes -->
-                    <VCol v-if="usuario.role == 2" cols="12">
+                    <VCol v-if="isEmpresaForm" cols="12">
                         <VSelect
                             density="compact"
                             variant="outlined"
@@ -606,6 +588,8 @@ export default {
                         this.usuario.role = 1;
                         this.usuario.gestores_ids = [];
                         this.usuario.clientes_ids = [];
+                    } else if (this.type === "empresa") {
+                        this.usuario.role = 1;
                     }
                     this.usuario.password = "";
                     this.passwordConfirm = "";
@@ -623,8 +607,8 @@ export default {
         },
         "usuario.role": {
             handler(newRole) {
-                if (newRole == 2) {
-                    // Si es cliente, cargar gestores
+                if (newRole == 2 || this.type === "empresa") {
+                    // Cliente legacy (role 2) o formulario empresa (role normalizado a 1)
                     this.loadGestores();
                 } else if (newRole == 3) {
                     // Si es gestor, cargar clientes
@@ -678,6 +662,14 @@ export default {
     },
 
     methods: {
+        usuarioJsonForApi() {
+            const u = JSON.parse(JSON.stringify(this.usuario));
+            if (this.type === "empresa") {
+                u.es_empresa_form = true;
+            }
+            return JSON.stringify(u);
+        },
+
         buscarAvatar() {
             this.$refs.inputFile.showFilePicker();
         },
@@ -752,6 +744,9 @@ export default {
                 this.usuario.gestores_ids = [];
                 this.usuario.clientes_ids = [];
             }
+            if (this.type === "empresa") {
+                this.usuario.role = 1;
+            }
 
             let formDataUpdate = new FormData();
 
@@ -759,7 +754,7 @@ export default {
                 UploadFilesService.validateUploadedFile(fileSave);
                 formDataUpdate.append("imagen[]", fileSave, fileSave.name);
             }
-            formDataUpdate.append("usuario", JSON.stringify(this.usuario));
+            formDataUpdate.append("usuario", this.usuarioJsonForApi());
 
             axios
                 .post("api/update-usuario/" + this.usuario.id, formDataUpdate)
@@ -782,6 +777,9 @@ export default {
                     this.usuario.gestores_ids = [];
                     this.usuario.clientes_ids = [];
                 }
+                if (this.type === "empresa") {
+                    this.usuario.role = 1;
+                }
 
                 let formDataSave = new FormData();
 
@@ -790,7 +788,7 @@ export default {
                     formDataSave.append("imagen[]", fileSave, fileSave.name);
                 }
 
-                formDataSave.append("usuario", JSON.stringify(this.usuario));
+                formDataSave.append("usuario", this.usuarioJsonForApi());
 
                 axios.post("api/save-usuario", formDataSave).then(
                     (res) => {
@@ -844,7 +842,12 @@ export default {
                 email: "",
                 email_comercial: "",
                 password: "",
-                role: this.type === "usuario" ? 1 : null,
+                role:
+                    this.type === "usuario"
+                        ? 1
+                        : this.type === "empresa"
+                          ? 1
+                          : null,
                 direccion: "",
                 avatar: "",
                 cuenta: "00000000000000000000",
@@ -886,11 +889,12 @@ export default {
             return this.$store.getters.geterrors;
         },
 
+        isEmpresaForm() {
+            return this.type === "empresa";
+        },
+
         uri() {
             return window.location.origin;
-        },
-        idUser() {
-            return localStorage.user_id;
         },
 
         rolesFiltered() {

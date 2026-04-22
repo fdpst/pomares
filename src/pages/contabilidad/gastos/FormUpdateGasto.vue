@@ -177,7 +177,6 @@ export default {
                 nombre_archivo: null,
                 path: null,
                 tipo: "",
-                user_id: localStorage.getItem("user_id"),
             },
 
             errorImporte: "",
@@ -190,14 +189,16 @@ export default {
         this.getTiposGasto();
     },
 
-    "gasto.archivo": function (val) {
-        this.fileName = val.name.length > 0 ? val.name : "";
+    watch: {
+        "gasto.archivo": function (val) {
+            this.fileName = val && val.name && val.name.length > 0 ? val.name : "";
+        },
     },
 
     methods: {
         getTiposGasto() {
             axios
-                .get(`api/get-tipos-gasto/${localStorage.getItem("user_id")}`)
+                .get(`api/get-tipos-gasto`)
                 .then(
                     (res) => {
                         this.tipos = res.data;
@@ -230,7 +231,6 @@ export default {
             formData.append("nombreArchivo", this.fileName);
             formData.append("tipo", this.gasto.tipo);
             formData.append("fecha", this.gasto.fecha);
-            formData.append("user_id", this.gasto.user_id);
 
             axios
                 .put(`api/update-gasto/`, formData, {

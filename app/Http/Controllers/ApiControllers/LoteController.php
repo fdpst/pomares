@@ -30,7 +30,7 @@ class LoteController extends Controller
 {
      public function enviarFacturas(Request $request, $idUser = null)
      {
-          $effectiveUserId = GestorHelper::getUserId($request, $idUser);
+          $effectiveUserId = GestorHelper::getUserId($request);
           
           if (!$effectiveUserId) {
               return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -55,7 +55,7 @@ class LoteController extends Controller
 
      public function getFacturasByRango(Request $request, $user_id = null, $desde = null, $hasta = null, $tipo = null)
      {
-          $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+          $effectiveUserId = GestorHelper::getUserId($request);
           
           if (!$effectiveUserId) {
               return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -475,9 +475,13 @@ class LoteController extends Controller
           }
 
           if ($desde != null && $hasta != null) {
-               $facturas = NroFactura::where('user_id', '=', $userId)->whereHas('recibo', function ($query) use ($desde, $hasta) {
+               $q = NroFactura::query()->whereHas('recibo', function ($query) use ($desde, $hasta) {
                     $query->whereBetween('fecha', [$desde, $hasta]);
-               })->with(['recibo.servicios', 'recibo.cliente'])->get();
+               });
+               if (GestorHelper::restrictQueriesByOwnerUserId()) {
+                    $q->where('user_id', '=', $userId);
+               }
+               $facturas = $q->with(['recibo.servicios', 'recibo.cliente'])->get();
                
                if ($facturas->isEmpty()) {
                     return [
@@ -565,10 +569,12 @@ class LoteController extends Controller
                Storage::disk('lotes')->delete('userId_' . $userId . '/facturas_recibidas.zip');
           }
           
-          $facRecibidas = FacturaRecibida::where("fecha", ">=", $desde)
-               ->where("fecha", "<=", $hasta)
-               ->where("user_id", "=", $userId)
-               ->orderBy('id', 'desc')->get();
+          $q = FacturaRecibida::where("fecha", ">=", $desde)
+               ->where("fecha", "<=", $hasta);
+          if (GestorHelper::restrictQueriesByOwnerUserId()) {
+               $q->where("user_id", "=", $userId);
+          }
+          $facRecibidas = $q->orderBy('id', 'desc')->get();
 
           if ($facRecibidas->isEmpty()) {
                return [

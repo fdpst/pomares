@@ -16,12 +16,12 @@ class CatalogoFormaPagoController extends Controller
      */
     public function index(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->query('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $count = CatalogoFormaPago::where('user_id', $effectiveUserId)->count();
+        $count = GestorHelper::applyUserIdScope(CatalogoFormaPago::query(), $request)->count();
         if ($count === 0) {
             CatalogoFormaPago::create([
                 'user_id' => $effectiveUserId,
@@ -29,7 +29,7 @@ class CatalogoFormaPagoController extends Controller
             ]);
         }
 
-        $rows = CatalogoFormaPago::where('user_id', $effectiveUserId)
+        $rows = GestorHelper::applyUserIdScope(CatalogoFormaPago::query(), $request)
             ->orderBy('descripcion')
             ->get();
 
@@ -38,7 +38,7 @@ class CatalogoFormaPagoController extends Controller
 
     public function store(Request $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->input('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
@@ -48,8 +48,8 @@ class CatalogoFormaPagoController extends Controller
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('catalogo_formas_pago', 'descripcion')->where(function ($q) use ($effectiveUserId) {
-                    return $q->where('user_id', $effectiveUserId);
+                Rule::unique('catalogo_formas_pago', 'descripcion')->where(function ($q) use ($request) {
+                    return GestorHelper::applyUserIdScope($q, $request);
                 }),
             ],
         ]);
@@ -64,12 +64,12 @@ class CatalogoFormaPagoController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->input('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $row = CatalogoFormaPago::where('user_id', $effectiveUserId)->findOrFail($id);
+        $row = GestorHelper::applyUserIdScope(CatalogoFormaPago::query(), $request)->findOrFail($id);
 
         $validated = $request->validate([
             'descripcion' => [
@@ -77,8 +77,8 @@ class CatalogoFormaPagoController extends Controller
                 'string',
                 'max:120',
                 Rule::unique('catalogo_formas_pago', 'descripcion')
-                    ->where(function ($q) use ($effectiveUserId) {
-                        return $q->where('user_id', $effectiveUserId);
+                    ->where(function ($q) use ($request) {
+                        return GestorHelper::applyUserIdScope($q, $request);
                     })
                     ->ignore($row->id),
             ],
@@ -92,12 +92,12 @@ class CatalogoFormaPagoController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->query('user_id'));
+        $effectiveUserId = GestorHelper::getUserId($request);
         if (! $effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $row = CatalogoFormaPago::where('user_id', $effectiveUserId)->findOrFail($id);
+        $row = GestorHelper::applyUserIdScope(CatalogoFormaPago::query(), $request)->findOrFail($id);
 
         \App\Models\Proveedor::where('catalogo_forma_pago_id', $row->id)->update([
             'catalogo_forma_pago_id' => null,

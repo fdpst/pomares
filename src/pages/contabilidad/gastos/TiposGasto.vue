@@ -68,7 +68,6 @@
         tipo_gasto: {
           id: '',
           nombre: '',
-          user_id: localStorage.getItem('user_id')
         },
         tipos_gasto: [],
         headers: [{
@@ -95,7 +94,7 @@
     methods: {
 
       getTiposGasto() {
-        axios.get(`api/get-tipos-gasto/${localStorage.getItem('user_id')}`).then(res => {
+        axios.get(`api/get-tipos-gasto`).then(res => {
           this.tipos_gasto = res.data
 
         }, res => {

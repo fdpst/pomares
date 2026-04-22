@@ -201,6 +201,7 @@
 <script>
 import loteContentDialog from "./loteContentDialog.vue";
 import rangoFechas from "./rangoFechas.vue";
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 
 export default {
     components: {
@@ -646,16 +647,8 @@ export default {
         isloading: function () {
             return this.$store.getters.getloading;
         },
-        userId() {
-            return localStorage.user_id;
-        },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
     },
 };

@@ -85,13 +85,12 @@ class ReciboController extends Controller
     {
         try {
             // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-            $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+            $effectiveUserId = GestorHelper::getUserId($request);
 
             if (!$effectiveUserId) {
                 return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
             }
             
-            // Reemplazar el user_id del request con el effectiveUserId
             $request->merge(['user_id' => $effectiveUserId]);
             
             $metodo = $request->metodo;
@@ -143,41 +142,41 @@ class ReciboController extends Controller
                 );
             }
 
-            $this->saveReciboServicios($recibo, $request->servicios, $request->user_id);
+            $this->saveReciboServicios($recibo, $request->servicios, $effectiveUserId);
 
             /* comprobar el tipo */
             if ($tipo == 'presupuesto') {
-                $nombre_archivo = $this->savePresupuesto($recibo, $tipo, $request->user_id);
+                $nombre_archivo = $this->savePresupuesto($recibo, $tipo, $effectiveUserId);
                 $recibo->presupuesto_url = $nombre_archivo;
             }
 
             if ($tipo == 'factura') {
-                $nombre_archivo = $this->saveFactura($recibo, $tipo, $request->user_id, $request->albaranes, $request->checkbox, $metodo);
+                $nombre_archivo = $this->saveFactura($recibo, $tipo, $effectiveUserId, $request->albaranes, $request->checkbox, $metodo);
                 $recibo->factura_url = $nombre_archivo;
 
                 $orden_sepa =  $this->crearOrderSepa($request->cliente_id, $recibo, $request->user());
             }
 
             if ($tipo == 'facturarectificativa') {
-                $nombre_archivo = $this->saveFacturaRectificativa($recibo, $tipo, $request->user_id, $request->albaranes, $request->checkbox, $metodo);
+                $nombre_archivo = $this->saveFacturaRectificativa($recibo, $tipo, $effectiveUserId, $request->albaranes, $request->checkbox, $metodo);
                 $recibo->factura_url = $nombre_archivo;
 
                 $orden_sepa =  $this->crearOrderSepa($request->cliente_id, $recibo, $request->user());
             }
 
             if ($tipo == 'facturaproforma') {
-                $nombre_archivo = $this->saveFacturaProforma($recibo, $tipo, $request->user_id, $request->albaranes, $request->checkbox, $metodo);
+                $nombre_archivo = $this->saveFacturaProforma($recibo, $tipo, $effectiveUserId, $request->albaranes, $request->checkbox, $metodo);
                 $recibo->factura_url = $nombre_archivo;
             }
 
             // Las notas son los albaranes
             if ($tipo == 'nota') {
-                $nombre_archivo = $this->saveNota($recibo, $request->user_id);
+                $nombre_archivo = $this->saveNota($recibo, $effectiveUserId);
                 $recibo->nota_url = $nombre_archivo;
             }
 
             if ($tipo == 'parte-trabajo') {
-                $this->asociarPresupuesto($recibo, $request->nro_presupuesto_id, $request->user_id);
+                $this->asociarPresupuesto($recibo, $request->nro_presupuesto_id, $effectiveUserId);
             }
 
             if ($can_modify_document_number) {
@@ -650,10 +649,11 @@ class ReciboController extends Controller
 
         // Si se está proporcionando un nuevo número, validar que no exista en otro recibo
         if (!is_null($number)) {
-            // Buscar si existe el numero en otro recibo
+            $ownerUserId = Recibo::where('id', $reciboId)->value('user_id') ?? Auth::id();
+            // Buscar si existe el numero en otro recibo (misma empresa dueña del recibo)
             $exists_new = $model::where($field, $number)
                 ->where("recibo_id", "!=", $reciboId)
-                ->where('user_id', Auth::user()->id);
+                ->where('user_id', $ownerUserId);
 
             if (isset($serieId)) {
                 $exists_new->whereHas('recibo', function ($query) use ($serieId) {

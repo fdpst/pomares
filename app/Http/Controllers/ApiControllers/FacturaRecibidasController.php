@@ -47,10 +47,10 @@ class FacturaRecibidasController extends Controller
             ]);
         }
 
-        $facturaRecibidas = FacturaRecibida::orderBy('id', 'desc')
-            ->with('proveedor')
-            ->where('user_id', $effectiveUserId)
-            ->get();
+        $facturaRecibidas = GestorHelper::applyUserIdScope(
+            FacturaRecibida::orderBy('id', 'desc')->with('proveedor'),
+            $request
+        )->get();
 
         return response()->json([
             'status' => 200,
@@ -82,7 +82,7 @@ class FacturaRecibidasController extends Controller
      */
     public function store(FacturaRecibidaRequest $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -155,10 +155,9 @@ class FacturaRecibidasController extends Controller
     public function setContabilizado(Request $request, $id)
     {
         $fr = FacturaRecibida::findOrFail($id);
-        $fallbackUserId = $request->user_id ?? $fr->user_id;
-        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
-        if (!$effectiveUserId || (int) $fr->user_id !== (int) $effectiveUserId) {
+        if (!$effectiveUserId || !\App\Helpers\GestorHelper::ownsUserIdRow($request, $fr->user_id)) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
@@ -175,17 +174,16 @@ class FacturaRecibidasController extends Controller
      */
     public function pdf(Request $request, $id)
     {
-        $fallbackUserId = $request->query('user_id');
-        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $factura = FacturaRecibida::with(['proveedor.provincia', 'items'])
-            ->where('id', $id)
-            ->where('user_id', $effectiveUserId)
-            ->first();
+        $factura = GestorHelper::applyUserIdScope(
+            FacturaRecibida::with(['proveedor.provincia', 'items'])->where('id', $id),
+            $request
+        )->first();
 
         if (!$factura) {
             return response()->json(['error' => 'Autofactura no encontrada'], 404);
@@ -230,16 +228,16 @@ class FacturaRecibidasController extends Controller
      */
     public function resumenLiquidacionPdf(Request $request, $id)
     {
-        $fallbackUserId = $request->query('user_id');
-        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $factura = FacturaRecibida::where('id', $id)
-            ->where('user_id', $effectiveUserId)
-            ->first();
+        $factura = GestorHelper::applyUserIdScope(
+            FacturaRecibida::query()->where('id', $id),
+            $request
+        )->first();
 
         if (!$factura) {
             return response()->json(['error' => 'Autofactura no encontrada'], 404);
@@ -272,10 +270,9 @@ class FacturaRecibidasController extends Controller
     public function update(Request $request, $id)
     {
         $frU = FacturaRecibida::findOrFail($id);
-        $fallbackUserId = $request->user_id ?? $frU->user_id;
-        $effectiveUserId = GestorHelper::getUserId($request, $fallbackUserId);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
-        if (!$effectiveUserId) {
+        if (!$effectiveUserId || !\App\Helpers\GestorHelper::ownsUserIdRow($request, $frU->user_id)) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
@@ -399,16 +396,15 @@ class FacturaRecibidasController extends Controller
     public function printRecibidas(Request $request, $fecha_inicio, $fecha_fin)
     {
         $user = $request->user();
-        $user_id = $user->id;
         $fecha = Carbon::now();
         $desde = Carbon::parse($fecha_inicio);
         $hasta = Carbon::parse($fecha_fin);
         $empresa = 'Autónomo Cristina Gil Mateo';
         $ejercicio = $desde->format('Y');
-        $recibos =  FacturaRecibidaItems::whereHas('Factura', function ($query) use ($desde, $hasta, $user_id) {
+        $recibos = FacturaRecibidaItems::whereHas('Factura', function ($query) use ($desde, $hasta, $request) {
             $query->where('fecha', '>=', $desde->format('Y-m-d'))
-                ->where('fecha', '<=', $hasta->format('Y-m-d'))
-                ->where('user_id', '=', $user_id);
+                ->where('fecha', '<=', $hasta->format('Y-m-d'));
+            GestorHelper::applyUserIdScope($query, $request);
         })
             ->join('factura_recibidas', 'factura_recibidas.id', '=', 'factura_recibidas_items.factura_recibidas_id')
             ->orderBy('factura_recibidas.fecha', 'ASC')
@@ -446,12 +442,20 @@ class FacturaRecibidasController extends Controller
     public function duplicarFactura(Request $request)
     {
         try {
+            $effectiveUserId = GestorHelper::getUserId($request);
+            if (!$effectiveUserId) {
+                return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+            }
+
             $factura = FacturaRecibida::with(['items'])->find($request->id);
+            if (!$factura || !\App\Helpers\GestorHelper::ownsUserIdRow($request, $factura->user_id)) {
+                return response()->json(['error' => 'Autofactura no encontrada'], 404);
+            }
 
             $factura_duplicada = FacturaRecibida::create([
                 'fecha' => $request->fecha ?? $factura->fecha,
                 'nro_factura' => $request->nro_factura ?? $factura->nro_factura,
-                'user_id' => $request->user_id ?? $factura->user_id,
+                'user_id' => $effectiveUserId,
                 'proveedor_id' => $request->proveedor_id ?? $factura->proveedor_id,
                 'retencion_id' => ($request->retencion_id === 'null') ? null : ($request->retencion_id ?? $factura->retencion_id),
                 'descripcion' => $request->descripcion ?? $factura->descripcion,

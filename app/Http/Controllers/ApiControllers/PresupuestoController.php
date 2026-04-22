@@ -16,13 +16,13 @@ class PresupuestoController extends Controller
 {
   public function getRecibos(Request $request, $user_id = null){
     // Usar el helper para obtener el user_id correcto (cliente_id si es gestor)
-    $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+    $effectiveUserId = GestorHelper::getUserId($request);
     
     if (!$effectiveUserId) {
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
     
-    $presupuestos = PresupuestoResource::collection(Recibo::where('user_id', '=', $effectiveUserId)->whereHas('nro_presupuesto')->with('cliente')->orderBy('id', 'DESC')->get());
+    $presupuestos = PresupuestoResource::collection(GestorHelper::applyUserIdScope(Recibo::query(), $request)->whereHas('nro_presupuesto')->with('cliente')->orderBy('id', 'DESC')->get());
     return response()->json($presupuestos, 200);
   }
 

@@ -117,7 +117,6 @@ export default {
                 pdf: "",
                 nomrePdf: "",
                 existePdf: true,
-                user_id: localStorage.getItem("user_id"),
             },
 
             files: [],
@@ -178,7 +177,6 @@ export default {
             let formData = new FormData();
 
             formData.append("id", this.albaran.id);
-            formData.append("user_id", this.albaran.user_id);
             formData.append("fecha", this.albaran.fecha);
             formData.append("descripcion", this.albaran.descripcion);
             formData.append("proveedor_id", this.albaran.proveedor_id);
@@ -235,9 +233,6 @@ export default {
 
         errors() {
             return this.$store.getters.geterrors;
-        },
-        userID() {
-            return localStorage.user_id;
         },
     },
 };

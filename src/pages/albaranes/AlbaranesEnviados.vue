@@ -49,6 +49,8 @@
 </template>
 
 <script>
+  import { effectiveBusinessUserId } from '@/utils/tenantContext'
+
   export default {
     data() {
       return {
@@ -135,9 +137,9 @@
       isloading: function() {
         return this.$store.getters.getloading
       },
-      userId(){
-        return localStorage.user_id
-      }
+      tenantDirId() {
+        return effectiveBusinessUserId()
+      },
     }
   }
 </script>

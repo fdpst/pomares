@@ -178,7 +178,6 @@ const $emit = defineEmits(["update:customer-list"]);
 
 const { provinces, getProvincias, countries, getPaises } = useProvincias();
 const form = ref();
-const user_session_id = ref(localStorage.getItem("user_id"));
 const formValid = ref(false);
 
 const customer = ref({
@@ -250,7 +249,6 @@ const resetCustomer = () => {
         banco: "",
         forma_pago_id: "",
         historial: "",
-        user_id: user_session_id.value,
     };
 };
 
@@ -263,7 +261,6 @@ const submit = async () => {
         if (!formValid.value) return;
 
         setLoading(true);
-        customer.value.user_id = user_session_id.value;
         customer.value.activo = true;
         customer.value.fecha_alta = new Date().toISOString().substring(0, 10);
         const resp = await axios.post("api/save-cliente", customer.value);

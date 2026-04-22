@@ -20,7 +20,7 @@ class InvoiceSerieController extends Controller
         }
         
         return response()->json(
-            InvoiceSerie::where("user_id", $effectiveUserId)->get()
+            GestorHelper::applyUserIdScope(InvoiceSerie::query(), $request)->get()
         );
     }
 
@@ -55,7 +55,7 @@ class InvoiceSerieController extends Controller
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
         
-        $serie = InvoiceSerie::where('id', $id)->where('user_id', $effectiveUserId)->first();
+        $serie = GestorHelper::applyUserIdScope(InvoiceSerie::query(), $request)->where('id', $id)->first();
         
         if (!$serie) {
             return response()->json(['error' => 'Serie no encontrada o sin permisos'], 404);
@@ -76,7 +76,7 @@ class InvoiceSerieController extends Controller
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
         
-        $serie = InvoiceSerie::where('id', $id)->where('user_id', $effectiveUserId)->first();
+        $serie = GestorHelper::applyUserIdScope(InvoiceSerie::query(), $request)->where('id', $id)->first();
         
         if (!$serie) {
             return response()->json(['error' => 'Serie no encontrada o sin permisos'], 404);

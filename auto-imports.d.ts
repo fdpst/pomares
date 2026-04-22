@@ -56,6 +56,7 @@ declare global {
   const defineStore: typeof import('pinia')['defineStore']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
+  const effectiveBusinessUserId: typeof import('./src/utils/tenantContext.js')['effectiveBusinessUserId']
   const emailValidator: typeof import('./src/@core/utils/validators.js')['emailValidator']
   const escribirFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroFechasLista']
   const extendRef: typeof import('@vueuse/core')['extendRef']
@@ -71,6 +72,7 @@ declare global {
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getProvincias: typeof import('./src/composables/useProvincia.js')['getProvincias']
+  const getSessionAccountId: typeof import('./src/utils/tenantContext.js')['getSessionAccountId']
   const h: typeof import('vue')['h']
   const hexToRgb: typeof import('./src/@core/utils/colorConverter.js')['hexToRgb']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
@@ -161,6 +163,7 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const storageAccountDirName: typeof import('./src/utils/tenantContext.js')['storageAccountDirName']
   const storeToRefs: typeof import('pinia')['storeToRefs']
   const syncRef: typeof import('@vueuse/core')['syncRef']
   const syncRefs: typeof import('@vueuse/core')['syncRefs']
@@ -448,6 +451,7 @@ declare module 'vue' {
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly effectiveBusinessUserId: UnwrapRef<typeof import('./src/utils/tenantContext.js')['effectiveBusinessUserId']>
     readonly emailValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['emailValidator']>
     readonly escribirFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroFechasLista']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
@@ -461,6 +465,7 @@ declare module 'vue' {
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getSessionAccountId: UnwrapRef<typeof import('./src/utils/tenantContext.js')['getSessionAccountId']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hexToRgb: UnwrapRef<typeof import('./src/@core/utils/colorConverter.js')['hexToRgb']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
@@ -549,6 +554,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly storageAccountDirName: UnwrapRef<typeof import('./src/utils/tenantContext.js')['storageAccountDirName']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>

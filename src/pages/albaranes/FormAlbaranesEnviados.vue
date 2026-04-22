@@ -247,7 +247,7 @@
                             target="_blank"
                             :href="
                                 '/storage/albaranes/enviados/userId_' +
-                                this.recibo.user_id +
+                                storageOwnerId +
                                 '/' +
                                 urlFactura
                             "
@@ -289,7 +289,7 @@
                             target="_blank"
                             :href="
                                 '/storage/recibos/userId_' +
-                                this.recibo.user_id +
+                                storageOwnerId +
                                 '/' +
                                 factura_generada
                             ">
@@ -337,6 +337,7 @@
 import Confirmar from "./Confirmar.vue";
 import {CustomerSearch} from "../../composables/CustomerSearch";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 
 export default {
     components: {
@@ -389,7 +390,6 @@ export default {
                 importe: 0,
                 precio: 0,
                 recibo_id: null,
-                user_id: "9",
             },
             recibo: {
                 cliente_id: "",
@@ -407,7 +407,6 @@ export default {
                 nota_url: null,
                 has_iva: true,
                 servicios: [],
-                user_id: localStorage.getItem("user_id"),
             },
             factura_generada: false,
             nota_generada: false,
@@ -446,8 +445,9 @@ export default {
         errors() {
             return this.$store.getters.geterrors;
         },
-        userId() {
-            return localStorage.user_id;
+        storageOwnerId() {
+            const id = this.recibo?.user_id;
+            return id || effectiveBusinessUserId();
         },
         isEmpleado() {
             const role = parseInt(localStorage.getItem('role'));
@@ -561,7 +561,6 @@ export default {
                 nota_url: null,
                 has_iva: enviarIva,
                 servicios: this.arrayAgregados,
-                user_id: localStorage.getItem("user_id"),
             };
             axios.post(`api/save-factura-albaran`, commit).then(
                 (res) => {
@@ -602,7 +601,6 @@ export default {
                 nota_url: null,
                 has_iva: enviarIva,
                 servicios: this.arrayAgregados,
-                user_id: localStorage.getItem("user_id"),
             };
             axios.post(`api/save-nota-albaran`, commit).then(
                 (res) => {

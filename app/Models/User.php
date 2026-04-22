@@ -76,17 +76,7 @@ class User extends Authenticatable
 
     public function getRoleStrAttribute()
     {
-        if ($this->role == 1) {
-            return 'Administrador';
-        } elseif ($this->role == 2) {
-            return 'Cliente';
-        } elseif ($this->role == 3) {
-            return 'Gestor';
-        } elseif ($this->role == 4) {
-            return 'Empleado';
-        } else {
-            return 'Gestor';
-        }
+        return '';
     }
 
     public function provincia()

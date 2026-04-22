@@ -181,6 +181,7 @@
 
 <script>
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
+import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import CRUDSelect from "../../../components/CRUDSelect.vue";
 import Loading from "./Loading.vue";
 import {UploadFilesService} from "../../../utils/UploadFilesService";
@@ -222,7 +223,6 @@ export default {
                 nombre_archivo: null,
                 path: null,
                 tipo_id: null,
-                user_id: null,
             },
             errorImporte: "",
             fileName: "",
@@ -243,7 +243,6 @@ export default {
         },
     },
     created() {
-        this.gasto.user_id = this.effectiveUserId;
         if (this.$route.query.id) {
             this.getGastoById(this.$route.query.id);
         }
@@ -256,10 +255,7 @@ export default {
             axios.get(`api/get-gasto-by-id/${gasto_id}`).then(
                 (res) => {
                     const data = res.data?.gasto ?? res.data;
-                    this.gasto = {
-                        ...data,
-                        user_id: this.effectiveUserId,
-                    };
+                    this.gasto = { ...data };
                 },
                 (res) => {
                     $toast.error("Error consultando Gasto");
@@ -285,7 +281,6 @@ export default {
             formData.append("nombreArchivo", this.fileName);
             formData.append("tipo_id", this.gasto.tipo_id);
             formData.append("fecha", this.gasto.fecha);
-            formData.append("user_id", this.gasto.user_id);
 
             axios
                 .post("api/save-gasto", formData, {
@@ -326,10 +321,7 @@ export default {
                 );
         },
         guardarTipo() {
-            const payload = {
-                ...this.tipo_gasto,
-                user_id: this.effectiveUserId,
-            };
+            const payload = { ...this.tipo_gasto };
             axios.post(`api/save-tipos-gasto`, payload).then(
                 (res) => {
                     this.getTiposGasto();
@@ -357,7 +349,6 @@ export default {
         },
         onClienteChanged(event) {
             console.log('FormGasto: Cliente cambiado, actualizando datos...', event.detail);
-            this.gasto.user_id = this.effectiveUserId;
             this.getTiposGasto();
         },
 
@@ -394,7 +385,6 @@ export default {
                 UploadFilesService.validateUploadedFile(fileSave);
                 formSendFiles.append("imagen[]", fileSave, fileSave.name);
             }
-            formSendFiles.append("user_id", this.captureUriId);
             formSendFiles.append("carpeta", "ocr");
             formSendFiles.append("parentPholder", "ocr");
 
@@ -486,12 +476,7 @@ export default {
             return this.$store.getters.geterrors;
         },
         effectiveUserId() {
-            const role = parseInt(localStorage.getItem("role"));
-            const selectedCliente = localStorage.getItem("selected_cliente_id");
-            if (role === 3 && selectedCliente) {
-                return selectedCliente;
-            }
-            return localStorage.getItem("user_id");
+            return effectiveBusinessUserId();
         },
     },
 };

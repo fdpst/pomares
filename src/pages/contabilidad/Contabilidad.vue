@@ -108,13 +108,12 @@ export default {
             estadisticas: [],
             graph_labels: [],
             show_chips: true,
-            url: `api/get-ingreso-bruto/${localStorage.getItem("user_id")}`,
+            url: `api/get-ingreso-bruto`,
             ingreso_bruto: {
                 gasto: 0,
                 ingreso: 0,
                 suma_deuda: 0,
                 gasto_desglosado: [],
-                user_id: localStorage.getItem("user_id"),
             },
         };
     },

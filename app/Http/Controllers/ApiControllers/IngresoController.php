@@ -23,21 +23,21 @@ class IngresoController extends Controller
      */
     public function getIngresos(Request $request, $user_id = null)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json([], 200);
         }
 
         if ($request->has(['desde', 'hasta'])) {
-            $ingresos = Ingreso::where('user_id', '=', $effectiveUserId)
+            $ingresos = GestorHelper::applyUserIdScope(Ingreso::query(), $request)
                 ->orderBy('created_at', 'DESC')
                 ->whereBetween('created_at', [$request->desde, $request->hasta])
                 ->get();
             return response()->json($ingresos, 200);
         }
 
-        $ingreso = Ingreso::where('user_id', '=', $effectiveUserId)->orderBy('created_at', 'DESC')->get();
+        $ingreso = GestorHelper::applyUserIdScope(Ingreso::query(), $request)->orderBy('created_at', 'DESC')->get();
         return response()->json($ingreso, 200);
     }
 
@@ -49,7 +49,7 @@ class IngresoController extends Controller
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $ingreso = Ingreso::where('id', $ingreso_id)->where('user_id', $effectiveUserId)->first();
+        $ingreso = GestorHelper::applyUserIdScope(Ingreso::query()->where('id', $ingreso_id), $request)->first();
 
         if (!$ingreso) {
             return response()->json(['error' => 'Ingreso no encontrado'], 404);
@@ -66,7 +66,7 @@ class IngresoController extends Controller
      */
     public function saveIngreso(IngresoRequest $request)
     {
-        $effectiveUserId = GestorHelper::getUserId($request, $request->user_id);
+        $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
@@ -88,7 +88,7 @@ class IngresoController extends Controller
                 $deudaPendiente = $nro->deuda->total - $nro->deuda->pagado;
                 $maxImporte = $deudaPendiente;
                 if ($request->id) {
-                    $ingresoExistente = Ingreso::where('id', $request->id)->where('user_id', $effectiveUserId)->first();
+                    $ingresoExistente = GestorHelper::applyUserIdScope(Ingreso::query()->where('id', $request->id), $request)->first();
                     if ($ingresoExistente) {
                         $maxImporte = $deudaPendiente + (float) $ingresoExistente->importe;
                     }
@@ -217,7 +217,7 @@ class IngresoController extends Controller
             return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
         }
 
-        $ingreso = Ingreso::where('id', $ingreso_id)->where('user_id', $effectiveUserId)->first();
+        $ingreso = GestorHelper::applyUserIdScope(Ingreso::query()->where('id', $ingreso_id), $request)->first();
 
         if (!$ingreso) {
             return response()->json(['error' => 'Ingreso no encontrado'], 404);

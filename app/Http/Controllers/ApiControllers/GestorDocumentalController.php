@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
 use Mockery\Undefined;
+use App\Helpers\GestorHelper;
 
 class GestorDocumentalController extends Controller
 {
@@ -73,7 +74,6 @@ class GestorDocumentalController extends Controller
         $folderName = $request->folderName;
         $level = $request->level;
         $pathServ = $this->pathServer();
-        $user_id = $request->user_id;
         $replaceSpecials = preg_replace('([^A-Za-z0-9 ])', ' ',  $folderName); //Reemplaza caracteres especiales por espacios
         $replaceSpecials = str_replace(" ", "_" ,$replaceSpecials);//reemplaza espacios por pisos
         $folderName = $replaceSpecials;
@@ -96,14 +96,17 @@ class GestorDocumentalController extends Controller
      *
      * 
      */ 
-    public function getDocumentos($user_id)
+    public function getDocumentos(Request $request, $user_id = null)
     {
-        // $user_id= Auth::id();
+        $effectiveUserId = GestorHelper::getUserId($request);
+        if (!$effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
 
         $path = $this->pathServer();
         
         $allScan = [];
-        $arrayRutas = $this->rutas($user_id);
+        $arrayRutas = $this->rutas($effectiveUserId);
         foreach($arrayRutas as $ruta){           
             // if($ruta == 'storage/app/public/documentos/userId_'.$user_id.'/factura'){
             //     $factFiles[] =  ScanFolder::obtenerArchivosDirectorios($this->arrayFormatos(), $ruta, $user_id);
@@ -113,7 +116,7 @@ class GestorDocumentalController extends Controller
             // }
             $busqueda = $ruta;
             if(is_dir($path.$ruta)){
-                $allScan [] = ScanFolder::obtenerArchivosDirectorios($this->arrayFormatos(),$busqueda, $user_id);
+                $allScan [] = ScanFolder::obtenerArchivosDirectorios($this->arrayFormatos(),$busqueda, $effectiveUserId);
             }
         }
         return response()->json([
@@ -124,8 +127,6 @@ class GestorDocumentalController extends Controller
 
     public function saveDocuments(Request $request, $files = null)
     {
-        //$user_id = Auth::id();
-        $user_id = $request->user_id;
         $carpeta = $request->carpeta;
         $destination = $request->path . '/';
         $store = HandlerFiles::store($request,  $destination);
@@ -141,7 +142,10 @@ class GestorDocumentalController extends Controller
      * 
      */ 
     public function deleteDocument(Request $request){
-        $user_id = $request->user_id;
+        $user_id = GestorHelper::getUserId($request);
+        if (!$user_id) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
         $arrayRutas = $this->rutas($user_id);
         $PATH = $this->pathServer();
         $tree =  json_decode($request->tree);
