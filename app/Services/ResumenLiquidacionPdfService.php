@@ -7,7 +7,7 @@ use App\Models\Liquidacion;
 use App\Models\LiquidacionItem;
 use App\Models\ProveedorComision;
 use App\Models\ServicioPrecioCambio;
-use App\Models\User;
+use App\Models\Proveedor;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -71,12 +71,12 @@ class ResumenLiquidacionPdfService
             }
         }
 
-        $fr->loadMissing('proveedor');
+        $fr->loadMissing(['proveedor.provincia']);
 
         $deducciones = self::buildDeduccionesComisiones($liquidacionesOrdenadas, $fr);
         $totalComisionConIva = round((float) ($fr->total ?? 0), 2);
         $importeLiquidar = round($totalImporte - $totalComisionConIva, 2);
-        $emisor = self::bloqueEmisorUsuario($userId);
+        $cabeceraDerecha = self::bloquePuntoVenta($fr->proveedor);
 
         $pdf = PDF::loadView('pdf.resumen_liquidacion_factura', [
             'factura' => $fr,
@@ -86,7 +86,7 @@ class ResumenLiquidacionPdfService
             'fecha_documento' => $fr->fecha
                 ? Carbon::parse($fr->fecha)->format('d/m/Y')
                 : Carbon::now()->format('d/m/Y'),
-            'emisor_lineas' => $emisor,
+            'punto_venta_lineas' => $cabeceraDerecha,
             'filas_deducciones' => $deducciones['filas'],
             'mostrar_deducciones' => $deducciones['mostrar'],
             'total_deducciones' => self::fmtMoney($totalComisionConIva),
@@ -273,36 +273,34 @@ class ResumenLiquidacionPdfService
         ];
     }
 
-    /** Datos fiscales del usuario emisor (PDF resumen). */
-    private static function bloqueEmisorUsuario(int $userId): array
+    /** Datos fiscales del punto de venta (proveedor) en cabecera derecha del PDF. */
+    private static function bloquePuntoVenta(?Proveedor $p): array
     {
-        $u = User::query()->with('provincia')->find($userId);
-        if (!$u) {
+        if (!$p) {
             return [];
         }
 
+        $p->loadMissing('provincia');
+
         $lineas = [];
-        $razon = trim((string) ($u->nombre_fiscal ?? ''));
-        if ($razon === '') {
-            $razon = trim((string) ($u->name ?? ''));
+        $nombre = trim((string) ($p->nombre_comercial ?: $p->nombre ?: ''));
+        if ($nombre !== '') {
+            $lineas[] = mb_strtoupper($nombre, 'UTF-8');
         }
-        if ($razon !== '') {
-            $lineas[] = mb_strtoupper($razon, 'UTF-8');
-        }
-        $cif = trim((string) ($u->cif ?? ''));
+        $cif = trim((string) ($p->cif ?? ''));
         if ($cif !== '') {
             $lineas[] = 'CIF. ' . $cif;
         }
-        $dir = trim((string) ($u->direccion ?? ''));
+        $dir = trim((string) ($p->direccion ?? ''));
         if ($dir !== '') {
             $lineas[] = $dir;
         }
-        $cp = trim((string) ($u->postal_code ?? ''));
-        $ciu = trim((string) ($u->ciudad ?? ''));
-        $prov = $u->provincia ? trim((string) $u->provincia->nombre) : '';
-        $loc = trim($cp . ' ' . $ciu . ($prov !== '' ? '-' . $prov : ''));
-        if ($loc !== '') {
-            $lineas[] = $loc;
+        $cp = trim((string) ($p->cp ?? ''));
+        $loc = trim((string) ($p->localidad ?? ''));
+        $prov = $p->provincia ? trim((string) $p->provincia->nombre) : '';
+        $ultima = trim($cp . ' ' . $loc . ($prov !== '' ? '-' . $prov : ''));
+        if ($ultima !== '') {
+            $lineas[] = $ultima;
         }
 
         return $lineas;

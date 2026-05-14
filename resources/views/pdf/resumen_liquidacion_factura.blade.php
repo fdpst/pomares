@@ -8,7 +8,7 @@
         .cabecera { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
         .cabecera td { border: none; vertical-align: top; padding: 0; }
         .cabecera-fecha { font-size: 11px; width: 42%; }
-        .cabecera-emisor { text-align: right; font-size: 10px; line-height: 1.35; }
+        .cabecera-pv { text-align: right; font-size: 10px; line-height: 1.35; }
         h1 { font-size: 15px; margin: 10px 0 12px 0; text-align: center; letter-spacing: 0.02em; }
         .intro { text-align: justify; line-height: 1.45; margin: 0 0 16px 0; font-size: 10px; }
         table.datos { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
@@ -31,8 +31,8 @@
     <table class="cabecera">
         <tr>
             <td class="cabecera-fecha">{{ $fecha_documento ?? '' }}</td>
-            <td class="cabecera-emisor">
-                @foreach($emisor_lineas ?? [] as $ln)
+            <td class="cabecera-pv">
+                @foreach($punto_venta_lineas ?? [] as $ln)
                     {{ $ln }}<br>
                 @endforeach
             </td>
