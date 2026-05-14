@@ -114,6 +114,7 @@ declare global {
   const normalizarFechaItem: typeof import('./src/utils/filtroFechaLista.js')['normalizarFechaItem']
   const normalizarValorFiltroFecha: typeof import('./src/utils/filtroFechaLista.js')['normalizarValorFiltroFecha']
   const normalizeColumns: typeof import('./src/utils/documentColumns.js')['normalizeColumns']
+  const nroCoToSoloNumero: typeof import('./src/utils/nroCoLiquidacion.js')['nroCoToSoloNumero']
   const numberValidator: typeof import('./src/@core/utils/validators.js')['numberValidator']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
@@ -169,6 +170,7 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const soloNumeroANroCo: typeof import('./src/utils/nroCoLiquidacion.js')['soloNumeroANroCo']
   const storageAccountDirName: typeof import('./src/utils/tenantContext.js')['storageAccountDirName']
   const storeToRefs: typeof import('pinia')['storeToRefs']
   const syncRef: typeof import('@vueuse/core')['syncRef']
@@ -511,6 +513,7 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeColumns: UnwrapRef<typeof import('./src/utils/documentColumns.js')['normalizeColumns']>
+    readonly nroCoToSoloNumero: UnwrapRef<typeof import('./src/utils/nroCoLiquidacion.js')['nroCoToSoloNumero']>
     readonly numberValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['numberValidator']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -566,6 +569,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly soloNumeroANroCo: UnwrapRef<typeof import('./src/utils/nroCoLiquidacion.js')['soloNumeroANroCo']>
     readonly storageAccountDirName: UnwrapRef<typeof import('./src/utils/tenantContext.js')['storageAccountDirName']>
     readonly storeToRefs: UnwrapRef<typeof import('pinia')['storeToRefs']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>

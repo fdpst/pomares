@@ -399,6 +399,8 @@
     "leerFiltroBusquedaLista": true,
     "borrarMostrarFacturadasLista": true,
     "escribirMostrarFacturadasLista": true,
-    "leerMostrarFacturadasLista": true
+    "leerMostrarFacturadasLista": true,
+    "nroCoToSoloNumero": true,
+    "soloNumeroANroCo": true
   }
 }

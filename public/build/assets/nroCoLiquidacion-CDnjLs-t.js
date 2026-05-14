@@ -1,0 +1,1 @@
+function o(r){if(r==null||r===""||r==="null"||r==="undefined")return"";const n=String(r).trim(),t=n.match(/^CO-(\d+)$/i);return t?t[1]:n.replace(/^CO-/i,"").trim()}function i(r){const n=String(r??"").trim();if(n==="")return"";const t=n.replace(/\D/g,"");return t===""?"":"CO-"+String(parseInt(t,10))}export{o as n,i as s};
