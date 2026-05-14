@@ -48,8 +48,8 @@
                         <VTextField
                             filled
                             v-model="facturaRec.nro_factura"
-                            label="Nº factura (CO-n)"
-                            hint="Formato CO-n (n crece según necesidad). Si lo deja vacío, se asignará el siguiente correlativo."
+                            label="Nº factura (autofactura)"
+                            hint="Formato CO-número/año-Nº punto de venta (Nº = nro. proveedor en catálogo). Correlativo por PV y año. Se rellena al elegir fecha y punto de venta; si lo deja vacío, se asignará al guardar."
                             persistent-hint></VTextField>
                     </VCol>
                 </VRow>
@@ -427,11 +427,19 @@ export default {
     },
 
     created() {
-        this.getSiguienteNroCo();
         this.getProveedores();
         this.getRetenciones();
         this.getArrayIva();
         this.getServicios();
+    },
+
+    watch: {
+        "facturaRec.proveedor_id"() {
+            this.getSiguienteNroCo();
+        },
+        "facturaRec.fecha"() {
+            this.getSiguienteNroCo();
+        },
     },
 
     methods: {
@@ -460,16 +468,21 @@ export default {
                   });
         },
         getSiguienteNroCo() {
+            const pid = this.facturaRec.proveedor_id;
+            const fecha = this.facturaRec.fecha;
+            if (!pid || !fecha) {
+                return;
+            }
             axios
-                .get(`api/facturas-recibidas-siguiente-co`)
+                .get(`api/facturas-recibidas-siguiente-co`, {
+                    params: { proveedor_id: pid, fecha },
+                })
                 .then((res) => {
-                    if (res.data?.nro) {
+                    if (res.data?.nro && !res.data?.needs_proveedor) {
                         this.facturaRec.nro_factura = res.data.nro;
                     }
                 })
-                .catch(() => {
-                    this.facturaRec.nro_factura = "CO-1";
-                });
+                .catch(() => {});
         },
         getServicios() {
             axios

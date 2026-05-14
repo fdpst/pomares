@@ -393,6 +393,12 @@
     "leerFiltroFechasLista": true,
     "effectiveBusinessUserId": true,
     "getSessionAccountId": true,
-    "storageAccountDirName": true
+    "storageAccountDirName": true,
+    "borrarFiltroBusquedaLista": true,
+    "escribirFiltroBusquedaLista": true,
+    "leerFiltroBusquedaLista": true,
+    "borrarMostrarFacturadasLista": true,
+    "escribirMostrarFacturadasLista": true,
+    "leerMostrarFacturadasLista": true
   }
 }

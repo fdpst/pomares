@@ -23,7 +23,9 @@ declare global {
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('./src/@core/utils/formatters.js')['avatarText']
   const betweenValidator: typeof import('./src/@core/utils/validators.js')['betweenValidator']
+  const borrarFiltroBusquedaLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroBusquedaLista']
   const borrarFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']
+  const borrarMostrarFacturadasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarMostrarFacturadasLista']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -58,7 +60,9 @@ declare global {
   const effectScope: typeof import('vue')['effectScope']
   const effectiveBusinessUserId: typeof import('./src/utils/tenantContext.js')['effectiveBusinessUserId']
   const emailValidator: typeof import('./src/@core/utils/validators.js')['emailValidator']
+  const escribirFiltroBusquedaLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroBusquedaLista']
   const escribirFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroFechasLista']
+  const escribirMostrarFacturadasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirMostrarFacturadasLista']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const filterColumnsByType: typeof import('./src/utils/documentColumns.js')['filterColumnsByType']
   const formatDate: typeof import('./src/@core/utils/formatters.js')['formatDate']
@@ -92,7 +96,9 @@ declare global {
   const isToday: typeof import('./src/@core/utils/helpers.js')['isToday']
   const itemPasaFiltroFecha: typeof import('./src/utils/filtroFechaLista.js')['itemPasaFiltroFecha']
   const kFormatter: typeof import('./src/@core/utils/formatters.js')['kFormatter']
+  const leerFiltroBusquedaLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerFiltroBusquedaLista']
   const leerFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerFiltroFechasLista']
+  const leerMostrarFacturadasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerMostrarFacturadasLista']
   const lengthValidator: typeof import('./src/@core/utils/validators.js')['lengthValidator']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
   const logicNot: typeof import('@vueuse/math')['logicNot']
@@ -418,7 +424,9 @@ declare module 'vue' {
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['betweenValidator']>
+    readonly borrarFiltroBusquedaLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroBusquedaLista']>
     readonly borrarFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']>
+    readonly borrarMostrarFacturadasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarMostrarFacturadasLista']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -453,7 +461,9 @@ declare module 'vue' {
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly effectiveBusinessUserId: UnwrapRef<typeof import('./src/utils/tenantContext.js')['effectiveBusinessUserId']>
     readonly emailValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['emailValidator']>
+    readonly escribirFiltroBusquedaLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroBusquedaLista']>
     readonly escribirFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirFiltroFechasLista']>
+    readonly escribirMostrarFacturadasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['escribirMostrarFacturadasLista']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly filterColumnsByType: UnwrapRef<typeof import('./src/utils/documentColumns.js')['filterColumnsByType']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['formatDate']>
@@ -485,7 +495,9 @@ declare module 'vue' {
     readonly isToday: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isToday']>
     readonly itemPasaFiltroFecha: UnwrapRef<typeof import('./src/utils/filtroFechaLista.js')['itemPasaFiltroFecha']>
     readonly kFormatter: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['kFormatter']>
+    readonly leerFiltroBusquedaLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerFiltroBusquedaLista']>
     readonly leerFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerFiltroFechasLista']>
+    readonly leerMostrarFacturadasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['leerMostrarFacturadasLista']>
     readonly lengthValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>

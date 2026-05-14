@@ -7,6 +7,7 @@ use App\Models\FacturaRecibidaItems;
 use App\Models\Retencion;
 use Illuminate\Http\Request;
 use App\Models\FacturaRecibida;
+use App\Models\Liquidacion;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use App\Traits\Files\HandlerFiles;
 use App\Http\Requests\FacturaRecibidaRequest;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FacturasRecibidasExport;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\CorrelativoCo;
+use App\Helpers\CorrelativoAutofacturaRecibida;
 use App\Helpers\GestorHelper;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -59,18 +60,34 @@ class FacturaRecibidasController extends Controller
     }
 
     /**
-     * Siguiente Nº de autofactura en formato CO-N (serie común con liquidaciones del usuario).
+     * Siguiente número de autofactura: CO-{n}/{año}-{Nº punto de venta} (nro_proveedor o id).
+     * Requiere query proveedor_id (y opcionalmente fecha Y-m-d) para calcular el correlativo por PV y año.
      */
     public function siguienteNroCo(Request $request)
     {
         $effectiveUserId = GestorHelper::getUserId($request);
 
         if (!$effectiveUserId) {
-            return response()->json(['nro' => 'CO-1'], 200);
+            return response()->json(['nro' => '', 'needs_proveedor' => true], 200);
+        }
+
+        $proveedorId = (int) $request->query('proveedor_id', 0);
+        if ($proveedorId <= 0) {
+            return response()->json(['nro' => '', 'needs_proveedor' => true], 200);
+        }
+
+        $fecha = $request->query('fecha');
+        if ($fecha === null || $fecha === '') {
+            $fecha = now()->format('Y-m-d');
         }
 
         return response()->json([
-            'nro' => CorrelativoCo::siguiente($effectiveUserId),
+            'nro' => CorrelativoAutofacturaRecibida::siguiente(
+                (int) $effectiveUserId,
+                $proveedorId,
+                (string) $fecha
+            ),
+            'needs_proveedor' => false,
         ], 200);
     }
 
@@ -95,7 +112,11 @@ class FacturaRecibidasController extends Controller
 
             $nroRaw = trim((string) ($request->nro_factura ?? ''));
             if ($nroRaw === '' || strcasecmp($nroRaw, 'null') === 0) {
-                $nroRaw = CorrelativoCo::siguiente($effectiveUserId);
+                $nroRaw = CorrelativoAutofacturaRecibida::siguiente(
+                    (int) $effectiveUserId,
+                    (int) $request->proveedor_id,
+                    (string) $request->fecha
+                );
             }
 
             $factRec = new FacturaRecibida;
@@ -369,6 +390,9 @@ class FacturaRecibidasController extends Controller
     {
         $row = FacturaRecibida::find($id);
         if ($row) {
+            Liquidacion::where('factura_recibida_id', $row->id)->update([
+                'factura_recibida_id' => null,
+            ]);
             $resPath = trim((string) ($row->resumen_liquidacion ?? ''));
             if ($resPath !== '' && Storage::disk('recibos')->exists($resPath)) {
                 Storage::disk('recibos')->delete($resPath);
@@ -452,9 +476,18 @@ class FacturaRecibidasController extends Controller
                 return response()->json(['error' => 'Autofactura no encontrada'], 404);
             }
 
+            $nroDup = trim((string) ($request->nro_factura ?? ''));
+            if ($nroDup === '' || strcasecmp($nroDup, 'null') === 0) {
+                $nroDup = CorrelativoAutofacturaRecibida::siguiente(
+                    (int) $effectiveUserId,
+                    (int) ($request->proveedor_id ?? $factura->proveedor_id),
+                    (string) ($request->fecha ?? $factura->fecha)
+                );
+            }
+
             $factura_duplicada = FacturaRecibida::create([
                 'fecha' => $request->fecha ?? $factura->fecha,
-                'nro_factura' => $request->nro_factura ?? $factura->nro_factura,
+                'nro_factura' => $nroDup,
                 'user_id' => $effectiveUserId,
                 'proveedor_id' => $request->proveedor_id ?? $factura->proveedor_id,
                 'retencion_id' => ($request->retencion_id === 'null') ? null : ($request->retencion_id ?? $factura->retencion_id),

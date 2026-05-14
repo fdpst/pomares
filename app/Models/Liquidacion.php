@@ -20,6 +20,7 @@ class Liquidacion extends Model
         'descripcion',
         'imagen',
         'total',
+        'factura_recibida_id',
     ];
 
     public function proveedor()
@@ -30,5 +31,10 @@ class Liquidacion extends Model
     public function items()
     {
         return $this->hasMany(LiquidacionItem::class, 'liquidacion_id', 'id');
+    }
+
+    public function facturaRecibida()
+    {
+        return $this->belongsTo(FacturaRecibida::class, 'factura_recibida_id');
     }
 }

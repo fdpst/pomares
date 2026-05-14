@@ -40,34 +40,78 @@
 
             <VRow class="mt-2 align-end">
                 <VCol
-                    cols="12"
-                    md="4">
+                    cols="6"
+                    sm="4"
+                    md="2"
+                    lg="2">
                     <AppDateTimePicker
                         v-model="fechaDesde"
+                        density="compact"
+                        hide-details
                         label="Fecha desde"
                         prepend-icon="ri-calendar-fill"
                     />
                 </VCol>
                 <VCol
-                    cols="12"
-                    md="4">
+                    cols="6"
+                    sm="4"
+                    md="2"
+                    lg="2">
                     <AppDateTimePicker
                         v-model="fechaHasta"
+                        density="compact"
+                        hide-details
                         label="Fecha hasta"
                         prepend-icon="ri-calendar-fill"
                     />
                 </VCol>
                 <VCol
                     cols="12"
-                    md="4"
-                    class="d-flex align-center pb-2">
+                    sm="12"
+                    md="8"
+                    lg="8"
+                    class="d-flex align-center flex-wrap ga-2 pb-1 pb-md-0">
+                    <VSwitch
+                        v-model="mostrarFacturadas"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                        inset
+                        class="liquidacion-switch-facturadas"
+                        title="Mostrar liquidaciones ya facturadas (autofactura comisiones)"
+                        label="Mostrar facturadas"
+                    />
                     <VBtn
-                        variant="text"
+                        variant="tonal"
                         color="secondary"
                         size="small"
-                        @click="limpiarFiltroFechas">
-                        Quitar filtro de fechas
+                        rounded="lg"
+                        @click="limpiarTodosLosFiltros">
+                        Eliminar filtros
                     </VBtn>
+                </VCol>
+            </VRow>
+
+            <VRow
+                v-if="resumenCantidadesArticulos.length"
+                class="mt-3">
+                <VCol cols="12">
+                    <div class="resumen-articulos-bloque pa-3 rounded-lg">
+                        <div class="text-caption mb-2 resumen-articulos-caption">
+                            Total unidades por artículo (según fecha y búsqueda)
+                        </div>
+                        <div class="d-flex flex-wrap ga-2">
+                            <VChip
+                                v-for="row in resumenCantidadesArticulos"
+                                :key="row.key"
+                                size="small"
+                                variant="flat"
+                                class="resumen-articulo-chip">
+                                {{ row.label }}:
+                                {{ formatCantidadResumen(row.total) }}
+                            </VChip>
+                        </div>
+                    </div>
                 </VCol>
             </VRow>
         </div>
@@ -83,15 +127,6 @@
             class="elevation-1 mt-2"
             :show-select="true"
             :return-object="true">
-            <template v-slot:item.nro_factura="{item}">
-                <span v-if="item.nro_factura != null">
-                    {{
-                        item.nro_factura == null || item.nro_factura == "null"
-                            ? "Sin información"
-                            : item.nro_factura
-                    }}
-                </span>
-            </template>
             <template v-slot:item.fecha="{item}">
                 <span v-if="item.fecha != null">
                     {{ formatDateEs(item.fecha) }}
@@ -101,6 +136,21 @@
                 <span v-if="item.total != null">
                     {{ formatPrice(item.total) }}€
                 </span>
+            </template>
+            <template v-slot:item.factura_autofactura_nro="{item}">
+                <span
+                    v-if="
+                        item.factura_recibida &&
+                        item.factura_recibida.nro_factura != null &&
+                        item.factura_recibida.nro_factura !== 'null'
+                    ">
+                    {{ item.factura_recibida.nro_factura }}
+                </span>
+                <span
+                    v-else
+                    class="text-medium-emphasis"
+                    >—</span
+                >
             </template>
             <template v-slot:item.action="{item}">
                 <RouterLink
@@ -154,7 +204,7 @@
     <ConfirmDialog
         v-model="modalFacturaComisiones"
         color="primary"
-        text="Se agruparán las liquidaciones por punto de venta (proveedor) y se creará una autofactura por cada uno, con una línea por liquidación que tenga comisión calculable. El Nº de cada autofactura será el siguiente correlativo CO-N (misma serie que las liquidaciones). Las liquidaciones sin proveedor o sin comisión aplicable se omitirán. ¿Continuar?"
+        text="Se agruparán las liquidaciones por punto de venta (proveedor) y se creará una autofactura por cada uno, con una línea por liquidación que tenga comisión calculable. El Nº de cada autofactura será CO-n/año-Nº PV según el correlativo de ese punto de venta y año (independiente de las liquidaciones CO-N). Las liquidaciones sin proveedor o sin comisión aplicable se omitirán. ¿Continuar?"
         @cancel="modalFacturaComisiones = false"
         @confirm="confirmarFacturaComisiones" />
 </template>
@@ -164,10 +214,17 @@ import {localizePrice} from "@/components/Transformations";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
 import { effectiveBusinessUserId } from "@/utils/tenantContext";
 import { itemPasaFiltroFecha } from "@/utils/filtroFechaLista.js";
+import { nroCoToSoloNumero } from "@/utils/nroCoLiquidacion.js";
 import {
+    borrarFiltroBusquedaLista,
     borrarFiltroFechasLista,
+    borrarMostrarFacturadasLista,
+    escribirFiltroBusquedaLista,
     escribirFiltroFechasLista,
+    escribirMostrarFacturadasLista,
+    leerFiltroBusquedaLista,
     leerFiltroFechasLista,
+    leerMostrarFacturadasLista,
 } from "@/utils/persistenciaFiltroFechaLista.js";
 
 const LISTA_PERSIST_ID = "liquidaciones";
@@ -184,12 +241,9 @@ export default {
             search: "",
             fechaDesde: null,
             fechaHasta: null,
+            mostrarFacturadas: false,
             liquidaciones: [],
             headers: [
-                {
-                    title: "NRO. LIQUIDACIÓN",
-                    value: "nro_factura",
-                },
                 {
                     title: "Fecha",
                     value: "fecha",
@@ -199,12 +253,13 @@ export default {
                     value: "proveedor.nombre",
                 },
                 {
-                    title: "Descripción",
-                    value: "descripcion",
-                },
-                {
                     title: "Total",
                     value: "total",
+                },
+                {
+                    title: "Facturada",
+                    value: "factura_autofactura_nro",
+                    sortable: false,
                 },
                 {
                     title: "Acciones",
@@ -215,8 +270,11 @@ export default {
         };
     },
     created() {
-        this.restaurarFiltroFechasDesdeStorage();
+        this.restaurarFiltrosDesdeStorage();
         this.getLiquidaciones();
+    },
+    activated() {
+        this.restaurarFiltrosDesdeStorage();
     },
     watch: {
         fechaDesde() {
@@ -224,6 +282,12 @@ export default {
         },
         fechaHasta() {
             this.persistirFiltroFechas();
+        },
+        search() {
+            this.persistirBusqueda();
+        },
+        mostrarFacturadas() {
+            this.persistirMostrarFacturadas();
         },
     },
     methods: {
@@ -236,6 +300,23 @@ export default {
             this.fechaDesde = desde;
             this.fechaHasta = hasta;
         },
+        restaurarBusquedaDesdeStorage() {
+            this.search = leerFiltroBusquedaLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId
+            );
+        },
+        restaurarMostrarFacturadasDesdeStorage() {
+            this.mostrarFacturadas = leerMostrarFacturadasLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId
+            );
+        },
+        restaurarFiltrosDesdeStorage() {
+            this.restaurarFiltroFechasDesdeStorage();
+            this.restaurarBusquedaDesdeStorage();
+            this.restaurarMostrarFacturadasDesdeStorage();
+        },
         persistirFiltroFechas() {
             escribirFiltroFechasLista(
                 LISTA_PERSIST_ID,
@@ -244,10 +325,37 @@ export default {
                 this.fechaHasta
             );
         },
-        limpiarFiltroFechas() {
+        persistirBusqueda() {
+            escribirFiltroBusquedaLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId,
+                this.search
+            );
+        },
+        persistirMostrarFacturadas() {
+            escribirMostrarFacturadasLista(
+                LISTA_PERSIST_ID,
+                this.effectiveUserId,
+                this.mostrarFacturadas
+            );
+        },
+        limpiarTodosLosFiltros() {
             borrarFiltroFechasLista(LISTA_PERSIST_ID, this.effectiveUserId);
+            borrarFiltroBusquedaLista(LISTA_PERSIST_ID, this.effectiveUserId);
+            borrarMostrarFacturadasLista(LISTA_PERSIST_ID, this.effectiveUserId);
             this.fechaDesde = null;
             this.fechaHasta = null;
+            this.search = "";
+            this.mostrarFacturadas = false;
+        },
+        formatCantidadResumen(val) {
+            const n = Number(val);
+            if (!Number.isFinite(n)) {
+                return "0";
+            }
+            return new Intl.NumberFormat("es-ES", {
+                maximumFractionDigits: 4,
+            }).format(n);
         },
         getLiquidaciones() {
             axios
@@ -354,7 +462,7 @@ export default {
             // Limpiar la lista mientras se cargan los nuevos datos
             this.liquidaciones = [];
             this.selected = [];
-            this.restaurarFiltroFechasDesdeStorage();
+            this.restaurarFiltrosDesdeStorage();
             this.getLiquidaciones();
         },
     },
@@ -365,11 +473,106 @@ export default {
         effectiveUserId() {
             return effectiveBusinessUserId();
         },
-        liquidacionesFiltradas() {
+        liquidacionesPorFecha() {
             return this.liquidaciones.filter((row) =>
                 itemPasaFiltroFecha(row.fecha, this.fechaDesde, this.fechaHasta)
+            );
+        },
+        liquidacionesFiltradas() {
+            const rows = this.liquidacionesPorFecha;
+            if (this.mostrarFacturadas) {
+                return rows;
+            }
+            return rows.filter((row) => {
+                const fid = row.factura_recibida_id;
+                return (
+                    fid == null ||
+                    fid === "" ||
+                    fid === 0 ||
+                    fid === "0"
+                );
+            });
+        },
+        /** Mismas liquidaciones que vería la tabla con fecha, facturación, búsqueda. */
+        liquidacionesParaResumenTotales() {
+            const q = (this.search || "").trim().toLowerCase();
+            const visibles = this.liquidacionesFiltradas;
+            if (!q) {
+                return visibles;
+            }
+            return visibles.filter((liq) => {
+                const parts = [
+                    liq.nro_factura,
+                    nroCoToSoloNumero(liq.nro_factura),
+                    liq.descripcion,
+                    liq.total != null ? String(liq.total) : "",
+                    liq.fecha != null ? String(liq.fecha) : "",
+                    liq.proveedor?.nombre,
+                    liq.factura_recibida?.nro_factura,
+                ];
+                const items = Array.isArray(liq.items) ? liq.items : [];
+                for (const it of items) {
+                    parts.push(it.concepto);
+                    parts.push(it.servicio?.descripcion);
+                }
+                const hay = parts
+                    .filter((p) => p != null && String(p).trim() !== "")
+                    .join(" ")
+                    .toLowerCase();
+                return hay.includes(q);
+            });
+        },
+        resumenCantidadesArticulos() {
+            const map = new Map();
+            for (const liq of this.liquidacionesParaResumenTotales) {
+                const items = Array.isArray(liq.items) ? liq.items : [];
+                for (const it of items) {
+                    const sid = parseInt(String(it.id_servicio ?? 0), 10) || 0;
+                    const descServ =
+                        it.servicio && it.servicio.descripcion != null
+                            ? String(it.servicio.descripcion).trim()
+                            : "";
+                    const label =
+                        sid > 0 && descServ
+                            ? descServ
+                            : String(it.concepto || "Artículo").trim() ||
+                              "Artículo";
+                    const key =
+                        sid > 0 ? `s:${sid}` : `c:${label.toLowerCase()}`;
+                    const cant = parseFloat(String(it.cantidad ?? 0)) || 0;
+                    const prev = map.get(key);
+                    if (prev) {
+                        prev.total += cant;
+                    } else {
+                        map.set(key, { key, label, total: cant });
+                    }
+                }
+            }
+            return [...map.values()].sort((a, b) =>
+                a.label.localeCompare(b.label, "es", { sensitivity: "base" })
             );
         },
     },
 };
 </script>
+
+<style scoped>
+.resumen-articulos-bloque {
+    background-color: #eeeeee;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.resumen-articulos-caption {
+    color: #000;
+}
+.resumen-articulo-chip {
+    background-color: #e0e0e0 !important;
+}
+.resumen-articulos-bloque :deep(.resumen-articulo-chip .v-chip__content) {
+    color: #000 !important;
+}
+.liquidacion-switch-facturadas :deep(.v-label) {
+    white-space: normal;
+    line-height: 1.25;
+    font-size: 0.8125rem;
+}
+</style>

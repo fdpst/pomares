@@ -44,7 +44,9 @@
                         <VTextField
                             filled
                             v-model="facturaRec.nro_factura"
-                            label="Nro. de factura"></VTextField>
+                            label="Nro. de factura"
+                            hint="CO-número/año-Nº punto de venta; correlativo independiente por PV y año."
+                            persistent-hint></VTextField>
                     </VCol>
                 </VRow>
 

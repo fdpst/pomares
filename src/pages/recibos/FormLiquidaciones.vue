@@ -47,9 +47,9 @@
                         md="4">
                         <VTextField
                             filled
-                            v-model="facturaRec.nro_factura"
-                            label="Nº liquidación (CO-n)"
-                            hint="Correlativo CO-n (n sin límite de dígitos). Vacío = siguiente libre (compartido con autofacturas)."
+                            v-model="nroLiquidacionNumero"
+                            label="Nº liquidación"
+                            hint="Solo el número. Vacío = siguiente libre. Se guarda como CO-n (compartido con autofacturas)."
                             persistent-hint></VTextField>
                     </VCol>
                 </VRow>
@@ -314,7 +314,7 @@
                                     </div>
                                     <div
                                         class="text-caption liquidacion-resumen-subtitulo">
-                                        Subtotal, IVA comisiones, comisiones deducidas e importe
+                                        Importe = subtotal − IVA comisiones − comisiones
                                     </div>
                                 </div>
                             </div>
@@ -330,13 +330,17 @@
                                         }}</span>
                                     </div>
                                     <div
+                                        v-if="Number(totalIva) > 0"
                                         class="liquidacion-resumen-line text-body-1">
                                         <span class="text-medium-emphasis"
                                             >IVA por comisiones (21&nbsp;%)</span
                                         >
-                                        <span class="font-weight-medium">{{
-                                            format_precio(totalIva)
-                                        }}</span>
+                                        <span
+                                            class="font-weight-bold text-error"
+                                            >-{{
+                                                format_precio(totalIva)
+                                            }}</span
+                                        >
                                     </div>
                                     <div
                                         v-if="deduccionesComisionLines.length"
@@ -426,6 +430,10 @@
 <script>
 import { formatPrice } from "@/@core/utils/formatters";
 import { effectiveBusinessUserId } from "@/utils/tenantContext";
+import {
+    nroCoToSoloNumero,
+    soloNumeroANroCo,
+} from "@/utils/nroCoLiquidacion.js";
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
 
 /** IVA 21 % sobre la base de comisiones: resumen del formulario y facturas recibidas (LiquidacionesController::desgloseComisionLiquidacion). */
@@ -679,7 +687,13 @@ export default {
             formData.append("proveedor_id", this.facturaRec.proveedor_id);
             formData.append("retencion_id", "");
             formData.append("total", this.total);
-            formData.append("nro_factura", this.facturaRec.nro_factura);
+            formData.append(
+                "nro_factura",
+                this.facturaRec.nro_factura == null ||
+                    this.facturaRec.nro_factura === ""
+                    ? ""
+                    : String(this.facturaRec.nro_factura)
+            );
             formData.append(
                 "servicios",
                 JSON.stringify(this.facturaRec.servicios)
@@ -829,7 +843,8 @@ export default {
 
             this.subtotal = sub_total;
             this.totalIva = sumaIvaComisiones;
-            this.total = sub_total + sumaIvaComisiones - deduccionComisiones;
+            this.total =
+                sub_total - sumaIvaComisiones - deduccionComisiones;
         },
     },
     computed: {
@@ -842,6 +857,15 @@ export default {
         },
         effectiveUserId() {
             return effectiveBusinessUserId();
+        },
+        nroLiquidacionNumero: {
+            get() {
+                return nroCoToSoloNumero(this.facturaRec.nro_factura);
+            },
+            set(v) {
+                const co = soloNumeroANroCo(v);
+                this.facturaRec.nro_factura = co === "" ? null : co;
+            },
         },
         deduccionesComisionLines() {
             const lines = this.facturaRec.servicios || [];

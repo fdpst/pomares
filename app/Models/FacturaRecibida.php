@@ -40,4 +40,9 @@ class FacturaRecibida extends Model
       return $this->hasMany(FacturaRecibidaItems::class, 'factura_recibidas_id', 'id');
     }
 
+    public function liquidaciones()
+    {
+        return $this->hasMany(Liquidacion::class, 'factura_recibida_id');
+    }
+
 }

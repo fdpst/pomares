@@ -65,3 +65,75 @@ export function borrarFiltroFechasLista(listaId, userId) {
   localStorage.removeItem(buildKey(listaId, u, "desde"));
   localStorage.removeItem(buildKey(listaId, u, "hasta"));
 }
+
+const buildBusquedaKey = (listaId, userId) =>
+  `pomares:filtro-busqueda:${listaId}:u${String(userId || "0")}`;
+
+/**
+ * Texto de búsqueda guardado para la lista (mismo ámbito por usuario que las fechas).
+ *
+ * @param {string} listaId
+ * @param {string|number|null|undefined} userId
+ * @returns {string}
+ */
+export function leerFiltroBusquedaLista(listaId, userId) {
+  const raw = localStorage.getItem(buildBusquedaKey(listaId, String(userId || "0")));
+  if (raw == null) {
+    return "";
+  }
+  return String(raw);
+}
+
+/**
+ * @param {string} listaId
+ * @param {string|number|null|undefined} userId
+ * @param {string|null|undefined} search
+ */
+export function escribirFiltroBusquedaLista(listaId, userId, search) {
+  const key = buildBusquedaKey(listaId, String(userId || "0"));
+  const s = search == null ? "" : String(search).trim();
+  if (s === "") {
+    localStorage.removeItem(key);
+  } else {
+    localStorage.setItem(key, s);
+  }
+}
+
+export function borrarFiltroBusquedaLista(listaId, userId) {
+  localStorage.removeItem(buildBusquedaKey(listaId, String(userId || "0")));
+}
+
+const buildMostrarFacturadasKey = (listaId, userId) =>
+  `pomares:filtro-mostrar-facturadas:${listaId}:u${String(userId || "0")}`;
+
+/**
+ * @param {string} listaId
+ * @param {string|number|null|undefined} userId
+ * @returns {boolean}
+ */
+export function leerMostrarFacturadasLista(listaId, userId) {
+  const raw = localStorage.getItem(
+    buildMostrarFacturadasKey(listaId, String(userId || "0"))
+  );
+  return raw === "1" || raw === "true";
+}
+
+/**
+ * @param {string} listaId
+ * @param {string|number|null|undefined} userId
+ * @param {boolean} mostrar
+ */
+export function escribirMostrarFacturadasLista(listaId, userId, mostrar) {
+  const key = buildMostrarFacturadasKey(listaId, String(userId || "0"));
+  if (mostrar) {
+    localStorage.setItem(key, "1");
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+export function borrarMostrarFacturadasLista(listaId, userId) {
+  localStorage.removeItem(
+    buildMostrarFacturadasKey(listaId, String(userId || "0"))
+  );
+}

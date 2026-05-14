@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\ApiControllers;
 
+use App\Helpers\CorrelativoAutofacturaRecibida;
 use App\Helpers\CorrelativoCo;
 use App\Helpers\GestorHelper;
 use App\Http\Controllers\Controller;
@@ -32,7 +33,7 @@ class LiquidacionesController extends Controller
         }
 
         $liquidaciones = GestorHelper::applyUserIdScope(
-            Liquidacion::orderBy('id', 'desc')->with('proveedor'),
+            Liquidacion::orderBy('id', 'desc')->with(['proveedor', 'items.servicio', 'facturaRecibida']),
             $request
         )->get();
 
@@ -170,7 +171,6 @@ class LiquidacionesController extends Controller
         }
 
         $ids = [];
-        $total = 0;
 
         foreach ($data as $item) {
             $id = null;
@@ -178,7 +178,6 @@ class LiquidacionesController extends Controller
                 $id = $item['id'];
             }
 
-            $total += $item['total'];
             $ids[] = LiquidacionItem::updateOrCreate(['id' => $id], [
                 'liquidacion_id' => $liquidacion->id,
                 'concepto' => $item['concepto'],
@@ -191,7 +190,8 @@ class LiquidacionesController extends Controller
             ])->id;
         }
 
-        $liquidacion->update(['total' => $total]);
+        // El total de la liquidación (importe a liquidar) lo fija el cliente desde el resumen;
+        // no sustituir por la suma de totales de línea (incluyen IVA de artículo, no comisiones).
         LiquidacionItem::where('liquidacion_id', $liquidacion->id)->whereNotIn('id', $ids)->delete();
     }
 
@@ -213,7 +213,7 @@ class LiquidacionesController extends Controller
     }
 
     /**
-     * Siguiente CO-N para liquidaciones (misma serie que autofacturas / facturas recibidas del usuario).
+     * Siguiente CO-N para liquidaciones (serie propia; las autofacturas usan CO-n/año-NºPV por punto de venta).
      */
     public function siguienteNumero(Request $request)
     {
@@ -257,6 +257,7 @@ class LiquidacionesController extends Controller
                 'descripcion' => $request->descripcion ?? $origen->descripcion,
                 'imagen' => $request->imagen ?? $origen->imagen,
                 'total' => $request->total ?? $origen->total,
+                'factura_recibida_id' => null,
             ]);
 
             $items = isset($request->servicios) ? json_decode($request->servicios, true) : null;
@@ -288,7 +289,7 @@ class LiquidacionesController extends Controller
      * Crea una factura recibida (autofactura) por cada punto de venta (proveedor):
      * agrupa las liquidaciones seleccionadas por proveedor_id y, en cada factura,
      * una línea por liquidación con comisión calculable.
-     * Cada autofactura recibe el siguiente Nº correlativo CO-N (serie común con liquidaciones del usuario).
+     * Cada autofactura recibe el siguiente Nº CO-{n}/{año}-{Nº PV} (correlativo por proveedor y año).
      */
     public function crearFacturaComisiones(Request $request)
     {
@@ -319,6 +320,14 @@ class LiquidacionesController extends Controller
 
         if ($liquidaciones->count() !== count($ids)) {
             return response()->json(['error' => 'Alguna liquidación no existe o no pertenece a su cuenta.'], 404);
+        }
+
+        $yaFacturadas = $liquidaciones->filter(fn (Liquidacion $l) => $l->factura_recibida_id !== null && (int) $l->factura_recibida_id > 0);
+        if ($yaFacturadas->isNotEmpty()) {
+            return response()->json([
+                'error' => 'Alguna liquidación seleccionada ya está vinculada a una autofactura de comisiones. Desvincule o elimine esa factura, o no incluya esas liquidaciones.',
+                'liquidaciones_ya_facturadas' => $yaFacturadas->pluck('id')->values()->all(),
+            ], 422);
         }
 
         $omitidas = [];
@@ -379,7 +388,11 @@ class LiquidacionesController extends Controller
                 $conceptoItem = 'Comisiones liquidación: ' . $codigoResumen;
                 $descripcionFactura = $conceptoItem;
 
-                $nroFactura = CorrelativoCo::siguiente($effectiveUserId);
+                $nroFactura = CorrelativoAutofacturaRecibida::siguiente(
+                    (int) $effectiveUserId,
+                    $proveedorId,
+                    $fechaFactura
+                );
 
                 $fr = FacturaRecibida::create([
                     'user_id' => $effectiveUserId,
@@ -391,6 +404,15 @@ class LiquidacionesController extends Controller
                     'total' => $totalFactura,
                     'imagen' => null,
                     'liquidacion_resumen_codigo' => $codigoResumen,
+                ]);
+
+                $idsLiqEnFactura = collect($lineas)
+                    ->map(fn ($ln) => (int) $ln['liquidacion']->id)
+                    ->unique()
+                    ->values()
+                    ->all();
+                Liquidacion::whereIn('id', $idsLiqEnFactura)->update([
+                    'factura_recibida_id' => $fr->id,
                 ]);
 
                 $payloads = [];
