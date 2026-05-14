@@ -209,8 +209,6 @@
         <div class="clear"></div>
     </div>
 
-    <div class="titulo-doc">Factura recibida</div>
-
     <div class="bloque-cliente">
         <h3>Datos del cliente</h3>
         <p><strong>Razón social:</strong> {{ $razonSocialCliente }}</p>
