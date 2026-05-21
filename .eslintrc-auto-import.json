@@ -401,6 +401,11 @@
     "escribirMostrarFacturadasLista": true,
     "leerMostrarFacturadasLista": true,
     "nroCoToSoloNumero": true,
-    "soloNumeroANroCo": true
+    "soloNumeroANroCo": true,
+    "AUTH_STORAGE_KEYS": true,
+    "clearAuthStorage": true,
+    "getAuthToken": true,
+    "isAuthenticated": true,
+    "saveAuthFromLoginResponse": true
   }
 }

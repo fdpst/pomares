@@ -8,6 +8,7 @@ declare global {
   const $api: typeof import('./src/utils/api.js')['$api']
   const $format_precio: typeof import('./src/utils/format_precio.js')['$format_precio']
   const $toast: typeof import('./src/utils/toast.js')['$toast']
+  const AUTH_STORAGE_KEYS: typeof import('./src/utils/auth.js')['AUTH_STORAGE_KEYS']
   const COOKIE_MAX_AGE_1_YEAR: typeof import('./src/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']
   const CustomerSearch: typeof import('./src/composables/CustomerSearch.js')['CustomerSearch']
   const DOCUMENT_COLUMNS_DEFAULT: typeof import('./src/utils/documentColumns.js')['DOCUMENT_COLUMNS_DEFAULT']
@@ -26,6 +27,7 @@ declare global {
   const borrarFiltroBusquedaLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroBusquedaLista']
   const borrarFiltroFechasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']
   const borrarMostrarFacturadasLista: typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarMostrarFacturadasLista']
+  const clearAuthStorage: typeof import('./src/utils/auth.js')['clearAuthStorage']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -73,6 +75,7 @@ declare global {
   const format_precio: typeof import('./src/utils/format_precio.js')['format_precio']
   const format_precio_autofactura: typeof import('./src/utils/format_precio.js')['format_precio_autofactura']
   const getActivePinia: typeof import('pinia')['getActivePinia']
+  const getAuthToken: typeof import('./src/utils/auth.js')['getAuthToken']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getProvincias: typeof import('./src/composables/useProvincia.js')['getProvincias']
@@ -84,6 +87,7 @@ declare global {
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
   const inputPrice: typeof import('./src/@core/utils/formatters.js')['inputPrice']
   const integerValidator: typeof import('./src/@core/utils/validators.js')['integerValidator']
+  const isAuthenticated: typeof import('./src/utils/auth.js')['isAuthenticated']
   const isDefined: typeof import('@vueuse/core')['isDefined']
   const isEmpty: typeof import('./src/@core/utils/helpers.js')['isEmpty']
   const isEmptyArray: typeof import('./src/@core/utils/helpers.js')['isEmptyArray']
@@ -164,6 +168,7 @@ declare global {
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const resolveVuetifyTheme: typeof import('./src/@core/utils/vuetify.js')['resolveVuetifyTheme']
   const rgbaToHex: typeof import('./src/@core/utils/colorConverter.js')['rgbaToHex']
+  const saveAuthFromLoginResponse: typeof import('./src/utils/auth.js')['saveAuthFromLoginResponse']
   const serializeColumns: typeof import('./src/utils/documentColumns.js')['serializeColumns']
   const setActivePinia: typeof import('pinia')['setActivePinia']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
@@ -407,6 +412,7 @@ declare module 'vue' {
   interface ComponentCustomProperties {
     readonly $api: UnwrapRef<typeof import('./src/utils/api.js')['$api']>
     readonly $toast: UnwrapRef<typeof import('./src/utils/toast.js')['$toast']>
+    readonly AUTH_STORAGE_KEYS: UnwrapRef<typeof import('./src/utils/auth.js')['AUTH_STORAGE_KEYS']>
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./src/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']>
     readonly CustomerSearch: UnwrapRef<typeof import('./src/composables/CustomerSearch.js')['CustomerSearch']>
     readonly DOCUMENT_COLUMNS_DEFAULT: UnwrapRef<typeof import('./src/utils/documentColumns.js')['DOCUMENT_COLUMNS_DEFAULT']>
@@ -423,6 +429,7 @@ declare module 'vue' {
     readonly borrarFiltroBusquedaLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroBusquedaLista']>
     readonly borrarFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']>
     readonly borrarMostrarFacturadasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarMostrarFacturadasLista']>
+    readonly clearAuthStorage: UnwrapRef<typeof import('./src/utils/auth.js')['clearAuthStorage']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -469,6 +476,7 @@ declare module 'vue' {
     readonly format_precio: UnwrapRef<typeof import('./src/utils/format_precio.js')['format_precio']>
     readonly format_precio_autofactura: UnwrapRef<typeof import('./src/utils/format_precio.js')['format_precio_autofactura']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
+    readonly getAuthToken: UnwrapRef<typeof import('./src/utils/auth.js')['getAuthToken']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getSessionAccountId: UnwrapRef<typeof import('./src/utils/tenantContext.js')['getSessionAccountId']>
@@ -479,6 +487,7 @@ declare module 'vue' {
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly inputPrice: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['inputPrice']>
     readonly integerValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['integerValidator']>
+    readonly isAuthenticated: UnwrapRef<typeof import('./src/utils/auth.js')['isAuthenticated']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
     readonly isEmpty: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isEmpty']>
     readonly isEmptyArray: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isEmptyArray']>
@@ -556,6 +565,7 @@ declare module 'vue' {
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('./src/@core/utils/vuetify.js')['resolveVuetifyTheme']>
     readonly rgbaToHex: UnwrapRef<typeof import('./src/@core/utils/colorConverter.js')['rgbaToHex']>
+    readonly saveAuthFromLoginResponse: UnwrapRef<typeof import('./src/utils/auth.js')['saveAuthFromLoginResponse']>
     readonly serializeColumns: UnwrapRef<typeof import('./src/utils/documentColumns.js')['serializeColumns']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
@@ -788,6 +798,7 @@ declare module '@vue/runtime-core' {
   interface ComponentCustomProperties {
     readonly $api: UnwrapRef<typeof import('./src/utils/api.js')['$api']>
     readonly $toast: UnwrapRef<typeof import('./src/utils/toast.js')['$toast']>
+    readonly AUTH_STORAGE_KEYS: UnwrapRef<typeof import('./src/utils/auth.js')['AUTH_STORAGE_KEYS']>
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./src/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']>
     readonly CustomerSearch: UnwrapRef<typeof import('./src/composables/CustomerSearch.js')['CustomerSearch']>
     readonly DOCUMENT_COLUMNS_DEFAULT: UnwrapRef<typeof import('./src/utils/documentColumns.js')['DOCUMENT_COLUMNS_DEFAULT']>
@@ -804,6 +815,7 @@ declare module '@vue/runtime-core' {
     readonly borrarFiltroBusquedaLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroBusquedaLista']>
     readonly borrarFiltroFechasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarFiltroFechasLista']>
     readonly borrarMostrarFacturadasLista: UnwrapRef<typeof import('./src/utils/persistenciaFiltroFechaLista.js')['borrarMostrarFacturadasLista']>
+    readonly clearAuthStorage: UnwrapRef<typeof import('./src/utils/auth.js')['clearAuthStorage']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -850,6 +862,7 @@ declare module '@vue/runtime-core' {
     readonly format_precio: UnwrapRef<typeof import('./src/utils/format_precio.js')['format_precio']>
     readonly format_precio_autofactura: UnwrapRef<typeof import('./src/utils/format_precio.js')['format_precio_autofactura']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
+    readonly getAuthToken: UnwrapRef<typeof import('./src/utils/auth.js')['getAuthToken']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getSessionAccountId: UnwrapRef<typeof import('./src/utils/tenantContext.js')['getSessionAccountId']>
@@ -860,6 +873,7 @@ declare module '@vue/runtime-core' {
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly inputPrice: UnwrapRef<typeof import('./src/@core/utils/formatters.js')['inputPrice']>
     readonly integerValidator: UnwrapRef<typeof import('./src/@core/utils/validators.js')['integerValidator']>
+    readonly isAuthenticated: UnwrapRef<typeof import('./src/utils/auth.js')['isAuthenticated']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
     readonly isEmpty: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isEmpty']>
     readonly isEmptyArray: UnwrapRef<typeof import('./src/@core/utils/helpers.js')['isEmptyArray']>
@@ -937,6 +951,7 @@ declare module '@vue/runtime-core' {
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('./src/@core/utils/vuetify.js')['resolveVuetifyTheme']>
     readonly rgbaToHex: UnwrapRef<typeof import('./src/@core/utils/colorConverter.js')['rgbaToHex']>
+    readonly saveAuthFromLoginResponse: UnwrapRef<typeof import('./src/utils/auth.js')['saveAuthFromLoginResponse']>
     readonly serializeColumns: UnwrapRef<typeof import('./src/utils/documentColumns.js')['serializeColumns']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
