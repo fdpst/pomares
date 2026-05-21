@@ -16,7 +16,18 @@
                 <VCol
                     cols="12"
                     md="4"
-                    class="text-end">
+                    class="text-end d-flex flex-wrap justify-end ga-2">
+                    <VBtn
+                        rounded
+                        depressed
+                        color="secondary"
+                        class="mt-1"
+                        :disabled="selected.length === 0 || generandoRemesa"
+                        :loading="generandoRemesa"
+                        title="Genera fichero XML SEPA para el banco"
+                        @click="generarRemesa">
+                        Generar remesa
+                    </VBtn>
                     <VBtn
                         rounded
                         depressed
@@ -65,11 +76,14 @@
         <loader v-if="isloading"></loader>
 
         <VDataTable
+            v-model="selected"
             :headers="headers"
             :items="facturasRecibidasFiltradas"
             :search="search"
             item-key="id"
-            class="elevation-1 mt-2">
+            class="elevation-1 mt-2"
+            :show-select="true"
+            :return-object="true">
             <template v-slot:item.nro_factura="{item}">
                 <span v-if="item.nro_factura != null">
                     {{
@@ -166,6 +180,8 @@ export default {
         return {
             modalEliminar: false,
             item: "",
+            selected: [],
+            generandoRemesa: false,
             search: "",
             fechaDesde: null,
             fechaHasta: null,
@@ -302,6 +318,145 @@ export default {
                     $toast.error("No se pudo actualizar contabilizado");
                 });
         },
+        generarRemesa() {
+            if (this.selected.length === 0) {
+                return;
+            }
+            const ids = this.selected.map((row) => row.id);
+            const payload = {
+                ids,
+                user_id: this.effectiveUserId,
+            };
+            const role = parseInt(localStorage.getItem("role"), 10);
+            const selectedCliente = localStorage.getItem("selected_cliente_id");
+            if ((role === 3 || role === 4) && selectedCliente) {
+                payload.cliente_id = selectedCliente;
+            }
+
+            this.generandoRemesa = true;
+            axios
+                .post("api/facturas-recibidas-generar-remesa", payload, {
+                    responseType: "blob",
+                })
+                .then((response) => {
+                    const blob = response.data;
+                    const type = blob.type || "";
+                    if (
+                        type.includes("json") ||
+                        type.includes("text")
+                    ) {
+                        blob.text().then((t) => {
+                            try {
+                                const j = JSON.parse(t);
+                                const msg =
+                                    j.message ||
+                                    j.error ||
+                                    (j.errors &&
+                                        Object.values(j.errors)
+                                            .flat()
+                                            .join(" ")) ||
+                                    "Error al generar la remesa";
+                                $toast.error(msg);
+                            } catch {
+                                $toast.error("Error al generar la remesa");
+                            }
+                        });
+                        return;
+                    }
+
+                    const disposition =
+                        response.headers["content-disposition"] || "";
+                    let filename = "REMESA.xml";
+                    const match = disposition.match(
+                        /filename="?([^";\n]+)"?/i
+                    );
+                    if (match && match[1]) {
+                        filename = match[1].trim();
+                    }
+
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+
+                    const avisosHeader =
+                        response.headers["x-remesa-avisos"] ||
+                        response.headers["X-Remesa-Avisos"];
+                    if (avisosHeader) {
+                        try {
+                            const avisos = JSON.parse(
+                                decodeURIComponent(
+                                    escape(atob(avisosHeader))
+                                )
+                            );
+                            const incluidos =
+                                avisos?.puntos_venta_incluidos?.length > 0
+                                    ? avisos.puntos_venta_incluidos.join(", ")
+                                    : null;
+                            const textos =
+                                avisos?.mensajes?.length > 0
+                                    ? avisos.mensajes.join(" ")
+                                    : null;
+                            if (textos) {
+                                let msg = "Remesa descargada con avisos: " + textos;
+                                if (incluidos) {
+                                    msg +=
+                                        " Puntos de venta en el fichero: " +
+                                        incluidos +
+                                        ".";
+                                }
+                                $toast.warn(msg, { duration: 12000 });
+                            } else if (incluidos) {
+                                $toast.sucs(
+                                    "Remesa descargada. Puntos de venta: " +
+                                        incluidos
+                                );
+                            } else {
+                                $toast.sucs("Remesa generada y descargada");
+                            }
+                        } catch {
+                            $toast.sucs(
+                                "Remesa generada. Revise Datos de Empresa y puntos de venta."
+                            );
+                        }
+                    } else {
+                        $toast.sucs("Remesa generada y descargada");
+                    }
+                })
+                .catch((err) => {
+                    const data = err.response?.data;
+                    if (data instanceof Blob) {
+                        data.text().then((t) => {
+                            try {
+                                const j = JSON.parse(t);
+                                $toast.error(
+                                    j.message ||
+                                        (j.errors &&
+                                            Object.values(j.errors)
+                                                .flat()
+                                                .join(" ")) ||
+                                        "Error al generar la remesa"
+                                );
+                            } catch {
+                                $toast.error("Error al generar la remesa");
+                            }
+                        });
+                    } else {
+                        $toast.error(
+                            data?.message ||
+                                data?.error ||
+                                "Error al generar la remesa"
+                        );
+                    }
+                })
+                .finally(() => {
+                    this.generandoRemesa = false;
+                });
+        },
         verPdfAutofactura(item) {
             axios
                 .get(`api/facturas-recibidas-pdf/${item.id}`, {
@@ -428,6 +583,7 @@ export default {
             console.log('ListaFacturasRecibidas: Cliente cambiado, recargando facturas recibidas...', event.detail);
             // Limpiar la lista mientras se cargan los nuevos datos
             this.facturaRecibidas = [];
+            this.selected = [];
             this.restaurarFiltroFechasDesdeStorage();
             this.getFactRecibidas();
         },

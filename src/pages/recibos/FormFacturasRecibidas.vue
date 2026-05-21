@@ -544,6 +544,9 @@ export default {
                 "contabilizado",
                 this.facturaRec.contabilizado ? "1" : "0"
             );
+            if (this.effectiveUserId) {
+                formData.append("user_id", this.effectiveUserId);
+            }
 
             axios
                 .post(`api/facturas-recibidas`, formData, {

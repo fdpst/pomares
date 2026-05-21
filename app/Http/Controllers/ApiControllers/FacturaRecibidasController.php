@@ -19,7 +19,9 @@ use Illuminate\Support\Facades\DB;
 use App\Helpers\CorrelativoAutofacturaRecibida;
 use App\Helpers\GestorHelper;
 use App\Models\User;
+use App\Services\SepaPain008RemesaService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class FacturaRecibidasController extends Controller
 {
@@ -520,5 +522,77 @@ class FacturaRecibidasController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
+    }
+
+    /**
+     * Genera fichero XML pain.008 (remesa SEPA) para las autofacturas seleccionadas.
+     */
+    public function generarRemesa(Request $request, SepaPain008RemesaService $remesaService)
+    {
+        $effectiveUserId = GestorHelper::getUserId($request);
+
+        if (! $effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+
+        $ids = $request->input('ids', []);
+        if (! is_array($ids) || count($ids) === 0) {
+            return response()->json(['message' => 'Seleccione al menos una autofactura.', 'errors' => ['ids' => ['Seleccione al menos una autofactura.']]], 422);
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $ids = array_filter($ids, fn ($id) => $id > 0);
+
+        if ($ids === []) {
+            return response()->json(['message' => 'IDs de autofactura no válidos.', 'errors' => ['ids' => ['IDs no válidos.']]], 422);
+        }
+
+        $facturas = GestorHelper::applyUserIdScope(
+            FacturaRecibida::with(['proveedor.provincia'])->whereIn('id', $ids),
+            $request
+        )->get();
+
+        if ($facturas->count() !== count($ids)) {
+            return response()->json([
+                'message' => 'Alguna autofactura no existe o no pertenece a su cuenta.',
+                'errors' => ['ids' => ['Revise la selección.']],
+            ], 422);
+        }
+
+        try {
+            $creditor = $remesaService->resolveCreditorFromFacturas($facturas);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?? 'No se pudo determinar la empresa.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        if (GestorHelper::restrictQueriesByOwnerUserId()) {
+            if (! $effectiveUserId || (int) $creditor->id !== (int) $effectiveUserId) {
+                return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+            }
+        }
+
+        try {
+            $result = $remesaService->build($creditor, $facturas);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?? 'No se pudo generar la remesa.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        $headers = [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
+        ];
+
+        $warnings = $result['warnings'] ?? [];
+        if (! empty($warnings['mensajes'])) {
+            $headers['X-Remesa-Avisos'] = base64_encode(json_encode($warnings, JSON_UNESCAPED_UNICODE));
+        }
+
+        return response($result['xml'], 200, $headers);
     }
 }

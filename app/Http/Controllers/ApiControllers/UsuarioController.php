@@ -410,6 +410,7 @@ class UsuarioController extends Controller
                 $user->direccion = $usuario['direccion'] ?? null;
                 $user->ciudad = $usuario['ciudad'] ?? null;
                 $user->cuenta = $usuario['cuenta'] ?? '00000000000000000000';
+                $user->bic = isset($usuario['bic']) ? trim((string) $usuario['bic']) : null;
                 $user->postal_code = $usuario['postal_code'] ?? null;
                 $user->has_electronic_billing = $usuario['has_electronic_billing'] ?? true;
                 $user->email_comercial = $usuario['email_comercial'] ?? null;

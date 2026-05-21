@@ -27,6 +27,7 @@ class User extends Authenticatable
         'email_comercial',
         'ciudad',
         'cuenta',
+        'bic',
         'password',
         'role',
         'avatar',

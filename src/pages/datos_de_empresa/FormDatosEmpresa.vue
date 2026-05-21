@@ -219,6 +219,31 @@
                                 required />
                         </VCol>
                     </VRow>
+
+                    <VRow dense>
+                        <VCol
+                            cols="12"
+                            md="6">
+                            <VTextField
+                                variant="outlined"
+                                v-model="usuario.cuenta"
+                                label="IBAN cuenta de cobro (remesas SEPA)"
+                                hint="Cuenta del acreedor para ficheros de remesa"
+                                persistent-hint
+                                maxlength="34" />
+                        </VCol>
+                        <VCol
+                            cols="12"
+                            md="6">
+                            <VTextField
+                                variant="outlined"
+                                v-model="usuario.bic"
+                                label="BIC banco (opcional)"
+                                hint="Ej. CAIXESBB"
+                                persistent-hint
+                                maxlength="11" />
+                        </VCol>
+                    </VRow>
                 </div>
             </VCardText>
 
@@ -477,6 +502,8 @@ export default {
                 role: null,
                 direccion: "",
                 postal_code: "",
+                cuenta: "",
+                bic: "",
                 metodos_pago: {
                     id: null,
                     pago_uno: null,
