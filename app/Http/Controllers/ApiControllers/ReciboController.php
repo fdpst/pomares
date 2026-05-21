@@ -931,7 +931,7 @@ class ReciboController extends Controller
             $url = $request->file('image')->store('images', 'public');
 
             return response()->json([
-                'url' => env('VITE_API_BASE_URL') . 'storage/' . $url
+                'url' => rtrim(env('VITE_API_BASE_URL') ?: config('app.url'), '/') . '/storage/' . $url
             ], 200);
         }
 

@@ -10,14 +10,18 @@ import {
     getPascalCaseRouteName,
 } from "unplugin-vue-router";
 import VueRouter from "unplugin-vue-router/vite";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import VueDevTools from "vite-plugin-vue-devtools";
 import Layouts from "vite-plugin-vue-layouts";
 import vuetify from "vite-plugin-vuetify";
 import svgLoader from "vite-svg-loader";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+    const env = loadEnv(mode, process.cwd(), "");
+    const apiTarget = (env.APP_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+
+    return {
     plugins: [
         laravel({
             input: ["src/main.js"],
@@ -155,4 +159,11 @@ export default defineConfig({
         exclude: ["vuetify"],
         entries: ["./src/**/*.vue"],
     },
+    server: {
+        proxy: {
+            "/api": { target: apiTarget, changeOrigin: true },
+            "/sanctum": { target: apiTarget, changeOrigin: true },
+        },
+    },
+};
 });

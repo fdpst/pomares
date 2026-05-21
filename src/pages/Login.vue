@@ -1,5 +1,6 @@
 <script>
 import logo from "@/assets/images/logo_login.webp"
+import { clearAuthStorage, isAuthenticated, saveAuthFromLoginResponse } from "@/utils/auth"
 
 export default {
   name: 'login',
@@ -20,11 +21,14 @@ export default {
   },
 
   mounted() {
-    if (localStorage != undefined) {
-      let valid = localStorage.user_id
-
-      if (valid)
-        window.location.href = '/'
+    if (isAuthenticated()) {
+      const redirect = this.$route.query.redirect
+      this.$router.replace(typeof redirect === 'string' && redirect !== '/login' ? redirect : '/')
+      return
+    }
+    // Restos de logout incompleto (p. ej. user_id sin id_token)
+    if (localStorage.getItem('user_id') || localStorage.getItem('role')) {
+      clearAuthStorage()
     }
   },
 
@@ -38,16 +42,10 @@ export default {
 
         axios.post('api/login', this.user).then(response => {
           if (typeof response?.data?.token != "undefined") {
-            localStorage.setItem('id_token', response.data.token)
-            localStorage.setItem('user_name', response.data.user.name)
-            localStorage.setItem('user_email', response.data.user.email)
-            localStorage.setItem('role', response.data.user.role)
-            localStorage.setItem('user_id', response.data.user.id)
+            saveAuthFromLoginResponse(response.data)
 
-            const cookieStr = JSON.stringify(response.data.userAbilityRules)
-            document.cookie = 'userAbilityRules=' + cookieStr
-
-            window.location.href = '/'
+            const redirect = this.$route.query.redirect
+            this.$router.replace(typeof redirect === 'string' && redirect !== '/login' ? redirect : '/')
           }
           else {
             this.error = 'Algo ha salido mal'

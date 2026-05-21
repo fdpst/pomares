@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearAuthStorage } from '@/utils/auth'
 
 window.axios = axios
 
@@ -96,9 +97,13 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   response => response,
   error => {
-    if (error.response && error.response.status === 401) {
-      // Redirigir al login o manejar el error de autenticación
-      console.error('Error de autenticación:', error.response.data);
+    if (error.response?.status === 401) {
+      const path = typeof window !== 'undefined' ? window.location.pathname : ''
+      if (!path.startsWith('/login') && !path.startsWith('/recuperar-contrasena')) {
+        clearAuthStorage()
+        const redirect = encodeURIComponent(path + (window.location.search || ''))
+        window.location.assign(`/login?redirect=${redirect}`)
+      }
     }
     return Promise.reject(error);
   }

@@ -15,6 +15,7 @@ import rutas_liquidaciones from "./rutas_liquidaciones";
 import rutas_usuarios from "./rutas_usuarios";
 
 import Error from "@/pages/Error.vue";
+import { clearAuthStorage, isAuthenticated } from "@/utils/auth";
 
 function recursiveLayouts(route) {
     if (route.children) {
@@ -161,11 +162,23 @@ router.beforeEach((to) => {
         return { name: "error" };
     }
 
+    // Login / recuperar contraseña: solo si no hay token válido
+    if (to.meta.unauthenticatedOnly) {
+        if (isAuthenticated()) {
+            const redirect = typeof to.query.redirect === "string" ? to.query.redirect : "/";
+            return redirect === "/login" ? { path: "/" } : { path: redirect };
+        }
+        if (localStorage.getItem("user_id") || localStorage.getItem("role")) {
+            clearAuthStorage();
+        }
+        return true;
+    }
+
     if (to.meta.Auth) {
         const authUser = localStorage.getItem("role");
-        const id_token = localStorage.getItem("id_token");
 
-        if (id_token == null) {
+        if (!isAuthenticated()) {
+            clearAuthStorage();
             return {
                 path: "/login",
                 query: {

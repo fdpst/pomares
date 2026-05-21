@@ -1,5 +1,6 @@
 <script>
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import { clearAuthStorage } from '@/utils/auth'
 
 export default
 {
@@ -64,23 +65,12 @@ export default
   methods: {
     async logout()
     {
-      axios.post('/api/logout').then(response => 
-      {
-        localStorage.removeItem('id_token')
-        localStorage.removeItem('user_name')
-        localStorage.removeItem('user_email')
-        localStorage.removeItem('role')
-        localStorage.removeItem('user_id')
-        localStorage.removeItem('selected_cliente_id')
-
-        document.cookie = 'userData=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-        document.cookie = 'userAbilityRules=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-
+      axios.post('/api/logout').then(() => {
+        clearAuthStorage()
         this.$router.push('/login')
-
-      }).catch(error => {
-        console.log(error)
+      }).catch(() => {
+        clearAuthStorage()
+        this.$router.push('/login')
       })
     },
 

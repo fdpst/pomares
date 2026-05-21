@@ -6,7 +6,7 @@ use App\Http\Controllers\ApiControllers\InvoiceSerieController;
 /*Rutas login*/
 
 Route::post('/login', 'AuthController@login')->name('login');
-Route::post('/logout', 'AuthController@logout');
+Route::post('/logout', 'AuthController@logout')->middleware('auth:sanctum');
 Route::post('change-password', 'AuthController@changePassword');
 // START cambios para recordar contraseña con envio de una nueva por mail 
 Route::post('recover-password', 'AuthController@recoverPassword');
