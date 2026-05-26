@@ -20,6 +20,7 @@ class ProveedorComisionController extends Controller
         }
 
         $proveedor = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->find($proveedor_id);
+
         if (! $proveedor) {
             return response()->json(['error' => 'Punto de venta no encontrado'], 404);
         }

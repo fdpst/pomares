@@ -26,6 +26,7 @@ class ProveedorController extends Controller
       ->withCount('comisiones')
       ->orderBy('created_at', 'DESC')
       ->get();
+
     return response()->json($proveedores, 200);
   }
 

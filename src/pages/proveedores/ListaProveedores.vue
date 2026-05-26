@@ -32,8 +32,8 @@
 			<template v-slot:item.comisiones_count="{ item }">
 				<VChip
 					size="small"
-					:color="item.comisiones_count > 0 ? 'primary' : 'default'"
-					variant="tonal">
+					:color="item.comisiones_count > 0 ? 'primary' : undefined"
+					:variant="item.comisiones_count > 0 ? 'flat' : 'tonal'">
 					{{ item.comisiones_count ?? 0 }}
 				</VChip>
 			</template>
