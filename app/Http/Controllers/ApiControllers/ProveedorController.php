@@ -22,7 +22,10 @@ class ProveedorController extends Controller
       return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
     }
     
-    $proveedores = GestorHelper::applyUserIdScope(Proveedor::query(), $request)->orderBy('created_at', 'DESC')->get();
+    $proveedores = GestorHelper::applyUserIdScope(Proveedor::query(), $request)
+      ->withCount('comisiones')
+      ->orderBy('created_at', 'DESC')
+      ->get();
     return response()->json($proveedores, 200);
   }
 

@@ -531,7 +531,6 @@ class LiquidacionesController extends Controller
     private function desgloseComisionLiquidacion(Liquidacion $liq): ?array
     {
         $comisiones = ProveedorComision::where('proveedor_id', $liq->proveedor_id)
-            ->where('user_id', (int) $liq->user_id)
             ->get()
             ->keyBy(fn ($c) => (int) $c->servicio_id);
 

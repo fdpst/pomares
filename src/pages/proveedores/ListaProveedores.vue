@@ -29,6 +29,14 @@
 		</div>
 
 		<VDataTable :headers="headers" :items="proveedores" :search="search" item-key="id" class="elevation-1 mt-3">
+			<template v-slot:item.comisiones_count="{ item }">
+				<VChip
+					size="small"
+					:color="item.comisiones_count > 0 ? 'primary' : 'default'"
+					variant="tonal">
+					{{ item.comisiones_count ?? 0 }}
+				</VChip>
+			</template>
 			<template v-slot:item.action="{ item }">
 				<RouterLink :to="`/guardar-proveedor?id=${item.id}`" class="action-buttons">
 					<VIcon small class="mr-2" color="grey-600">
@@ -80,6 +88,12 @@
 					{
 						title: 'Teléfono',
 						value: 'telefono'
+					},
+					{
+						title: 'Comisiones',
+						value: 'comisiones_count',
+						sortable: true,
+						width: '8rem'
 					},
 					{
 						title: 'Fecha',
