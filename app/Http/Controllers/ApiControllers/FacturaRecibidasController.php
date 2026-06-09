@@ -268,11 +268,8 @@ class FacturaRecibidasController extends Controller
         }
 
         $path = trim((string) ($factura->resumen_liquidacion ?? ''));
-        $needsRegen = $path === ''
-            || ! Storage::disk('recibos')->exists($path)
-            || filled($factura->fecha_resumen_liquidacion);
 
-        if ($needsRegen) {
+        if (ResumenLiquidacionPdfService::necesitaRegenerarResumenPdf($factura)) {
             if ($factura->liquidaciones->isEmpty()) {
                 return response()->json(['error' => 'No hay resumen de liquidación para esta autofactura'], 404);
             }

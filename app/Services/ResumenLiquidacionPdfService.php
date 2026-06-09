@@ -394,6 +394,26 @@ class ResumenLiquidacionPdfService
     }
 
     /**
+     * ¿Hay que volver a generar el PDF? (fichero ausente, fecha personalizada o código desactualizado).
+     */
+    public static function necesitaRegenerarResumenPdf(FacturaRecibida $fr): bool
+    {
+        $path = trim((string) ($fr->resumen_liquidacion ?? ''));
+        if ($path === '' || ! Storage::disk('recibos')->exists($path)) {
+            return true;
+        }
+
+        if (filled($fr->fecha_resumen_liquidacion)) {
+            return true;
+        }
+
+        $esperado = self::resolverCodigoResumen($fr, (int) $fr->user_id);
+        $actual = trim((string) ($fr->liquidacion_resumen_codigo ?? ''));
+
+        return $actual !== $esperado;
+    }
+
+    /**
      * Regenera el PDF de resumen para una autofactura con liquidaciones vinculadas.
      */
     public static function regenerarParaFactura(FacturaRecibida $fr): void
