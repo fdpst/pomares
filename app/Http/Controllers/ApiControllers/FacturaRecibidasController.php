@@ -672,7 +672,7 @@ class FacturaRecibidasController extends Controller
         }
 
         $facturas = GestorHelper::applyUserIdScope(
-            FacturaRecibida::with(['proveedor.provincia', 'liquidaciones'])->whereIn('id', $ids),
+            FacturaRecibida::with(['proveedor.provincia', 'liquidaciones.items'])->whereIn('id', $ids),
             $request
         )->get();
 

@@ -384,15 +384,17 @@ class LiquidacionesController extends Controller
                 $totalFactura = round($totalFactura, 2);
 
                 $fechaFactura = now()->format('Y-m-d');
-                $codigoResumen = ResumenLiquidacionPdfService::siguienteCodigoResumen((int) $effectiveUserId, $fechaFactura);
-                $conceptoItem = 'Comisiones liquidación: ' . $codigoResumen;
-                $descripcionFactura = $conceptoItem;
 
                 $nroFactura = CorrelativoAutofacturaRecibida::siguiente(
                     (int) $effectiveUserId,
                     $proveedorId,
                     $fechaFactura
                 );
+
+                $codigoResumen = ResumenLiquidacionPdfService::codigoResumenMmYyDesdeAutofactura($nroFactura, $fechaFactura)
+                    ?? ResumenLiquidacionPdfService::siguienteCodigoResumen((int) $effectiveUserId, $fechaFactura);
+                $conceptoItem = 'Comisiones liquidación: ' . $codigoResumen;
+                $descripcionFactura = $conceptoItem;
 
                 $fr = FacturaRecibida::create([
                     'user_id' => $effectiveUserId,

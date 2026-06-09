@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\FacturaRecibida;
-use App\Models\Liquidacion;
 use App\Models\Proveedor;
 use App\Models\User;
 use Carbon\Carbon;
@@ -274,7 +273,7 @@ class SepaPain008RemesaService
     }
 
     /**
-     * Importe de remesa = suma de liquidaciones vinculadas a la autofactura (importe a liquidar).
+     * Importe de remesa = «Importe a liquidar» del resumen PDF (artículos − comisiones).
      *
      * @param  array{empresa: array, proveedores: array, mensajes: array<int, string>}  $warnings
      */
@@ -295,10 +294,7 @@ class SepaPain008RemesaService
             return 0.0;
         }
 
-        return round(
-            (float) $liquidaciones->sum(fn (Liquidacion $liq) => (float) $liq->total),
-            2
-        );
+        return ResumenLiquidacionPdfService::calcularImporteALiquidar($factura, $liquidaciones);
     }
 
     private function buildRemittanceInfo(FacturaRecibida $factura): string

@@ -22,9 +22,8 @@ class ResumenLiquidacionPdfService
      */
     public static function generarYAdjuntar(FacturaRecibida $fr, Collection $liquidacionesOrdenadas, int $userId): void
     {
-        $codigoResumen = trim((string) ($fr->liquidacion_resumen_codigo ?? ''));
-        if ($codigoResumen === '') {
-            $codigoResumen = self::siguienteCodigoResumen($userId, $fr->fecha);
+        $codigoResumen = self::resolverCodigoResumen($fr, $userId);
+        if ($fr->liquidacion_resumen_codigo !== $codigoResumen) {
             $fr->liquidacion_resumen_codigo = $codigoResumen;
         }
 
@@ -75,7 +74,7 @@ class ResumenLiquidacionPdfService
 
         $deducciones = self::buildDeduccionesComisiones($liquidacionesOrdenadas, $fr);
         $totalComisionConIva = round((float) ($fr->total ?? 0), 2);
-        $importeLiquidar = round($totalImporte - $totalComisionConIva, 2);
+        $importeLiquidar = self::calcularImporteALiquidar($fr, $liquidacionesOrdenadas, $totalImporte);
         $cabeceraDerecha = self::bloquePuntoVenta($fr->proveedor);
 
         $pdf = PDF::loadView('pdf.resumen_liquidacion_factura', [
@@ -99,7 +98,47 @@ class ResumenLiquidacionPdfService
     }
 
     /**
-     * Código MM/YY-N por usuario y mes-año de la fecha de la autofactura (N correlativo sin límite de dígitos).
+     * Código MM/YY-N: mes/año de la fecha + correlativo de la autofactura.
+     * Ej.: CO-11/2026-26 con fecha junio 2026 → 06/26-11.
+     */
+    public static function codigoResumenMmYyDesdeAutofactura(string $nroFactura, $fechaReferencia): ?string
+    {
+        $s = trim($nroFactura);
+        if ($s === '' || strcasecmp($s, 'null') === 0) {
+            return null;
+        }
+
+        if (! preg_match('/^CO-(\d+)\/(\d{4})-(\d+)/i', $s, $m)) {
+            return null;
+        }
+
+        $correlativo = (int) $m[1];
+        $fecha = $fechaReferencia ? Carbon::parse($fechaReferencia) : Carbon::now();
+
+        return $fecha->format('m/y') . '-' . $correlativo;
+    }
+
+    /**
+     * Prefiere MM/YY-{nº autofactura}; si no, el guardado o correlativo mensual.
+     */
+    public static function resolverCodigoResumen(FacturaRecibida $fr, int $userId): string
+    {
+        $fechaRef = $fr->fecha_resumen_liquidacion ?? $fr->fecha;
+        $desdeNro = self::codigoResumenMmYyDesdeAutofactura((string) ($fr->nro_factura ?? ''), $fechaRef);
+        if ($desdeNro !== null) {
+            return $desdeNro;
+        }
+
+        $existente = trim((string) ($fr->liquidacion_resumen_codigo ?? ''));
+        if ($existente !== '') {
+            return $existente;
+        }
+
+        return self::siguienteCodigoResumen($userId, $fechaRef);
+    }
+
+    /**
+     * Fallback: MM/YY-N correlativo mensual por usuario (sin nº CO-n/año-pv).
      */
     public static function siguienteCodigoResumen(int $userId, $fechaFactura): string
     {
@@ -302,6 +341,56 @@ class ResumenLiquidacionPdfService
         }
 
         return $lineas;
+    }
+
+    /**
+     * Importe a liquidar del resumen PDF = total artículos − comisiones (total autofactura).
+     * Misma fórmula que el pie «Importe a liquidar» del PDF.
+     *
+     * @param  Collection<int, Liquidacion>|null  $liquidacionesOrdenadas
+     */
+    public static function calcularImporteALiquidar(
+        FacturaRecibida $fr,
+        ?Collection $liquidacionesOrdenadas = null,
+        ?float $totalImporteArticulos = null
+    ): float {
+        $totalImporte = $totalImporteArticulos ?? self::calcularTotalImporteArticulos($fr, $liquidacionesOrdenadas);
+        $totalComisionConIva = round((float) ($fr->total ?? 0), 2);
+
+        return round($totalImporte - $totalComisionConIva, 2);
+    }
+
+    /**
+     * Suma de importes de línea (liquidacion_items.total) de las liquidaciones asociadas.
+     *
+     * @param  Collection<int, Liquidacion>|null  $liquidacionesOrdenadas
+     */
+    public static function calcularTotalImporteArticulos(
+        FacturaRecibida $fr,
+        ?Collection $liquidacionesOrdenadas = null
+    ): float {
+        if ($liquidacionesOrdenadas === null) {
+            $fr->loadMissing('liquidaciones.items');
+            $liquidacionesOrdenadas = $fr->liquidaciones;
+        } else {
+            foreach ($liquidacionesOrdenadas as $liq) {
+                if ($liq) {
+                    $liq->loadMissing('items');
+                }
+            }
+        }
+
+        $totalImporte = 0.0;
+        foreach ($liquidacionesOrdenadas as $liq) {
+            if (! $liq) {
+                continue;
+            }
+            foreach ($liq->items as $it) {
+                $totalImporte += (float) $it->total;
+            }
+        }
+
+        return round($totalImporte, 2);
     }
 
     /**
