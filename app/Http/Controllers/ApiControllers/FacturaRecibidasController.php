@@ -267,30 +267,27 @@ class FacturaRecibidasController extends Controller
             return response()->json(['error' => 'Autofactura no encontrada'], 404);
         }
 
-        $path = trim((string) ($factura->resumen_liquidacion ?? ''));
-
-        if (ResumenLiquidacionPdfService::necesitaRegenerarResumenPdf($factura)) {
-            if ($factura->liquidaciones->isEmpty()) {
-                return response()->json(['error' => 'No hay resumen de liquidación para esta autofactura'], 404);
-            }
-
-            try {
-                ResumenLiquidacionPdfService::regenerarParaFactura($factura);
-                $factura->refresh();
-                $path = trim((string) ($factura->resumen_liquidacion ?? ''));
-            } catch (\Throwable $e) {
-                Log::error('facturas-recibidas-resumen-liquidacion-pdf', [
-                    'id' => $id,
-                    'user_id' => $effectiveUserId,
-                    'message' => $e->getMessage(),
-                ]);
-
-                return response()->json([
-                    'error' => 'Error al generar el resumen de liquidación',
-                    'message' => config('app.debug') ? $e->getMessage() : 'Error interno',
-                ], 500);
-            }
+        if ($factura->liquidaciones->isEmpty()) {
+            return response()->json(['error' => 'No hay resumen de liquidación para esta autofactura'], 404);
         }
+
+        try {
+            ResumenLiquidacionPdfService::regenerarParaFactura($factura);
+            $factura->refresh();
+        } catch (\Throwable $e) {
+            Log::error('facturas-recibidas-resumen-liquidacion-pdf', [
+                'id' => $id,
+                'user_id' => $effectiveUserId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al generar el resumen de liquidación',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno',
+            ], 500);
+        }
+
+        $path = trim((string) ($factura->resumen_liquidacion ?? ''));
 
         if ($path === '' || ! Storage::disk('recibos')->exists($path)) {
             return response()->json(['error' => 'El archivo de resumen no está disponible'], 404);

@@ -391,7 +391,7 @@ class LiquidacionesController extends Controller
                     $fechaFactura
                 );
 
-                $codigoResumen = ResumenLiquidacionPdfService::codigoResumenMmYyDesdeAutofactura($nroFactura, $fechaFactura)
+                $codigoResumen = ResumenLiquidacionPdfService::codigoResumenDesdeNroFactura($nroFactura)
                     ?? ResumenLiquidacionPdfService::siguienteCodigoResumen((int) $effectiveUserId, $fechaFactura);
                 $conceptoItem = 'Comisiones liquidación: ' . $codigoResumen;
                 $descripcionFactura = $conceptoItem;

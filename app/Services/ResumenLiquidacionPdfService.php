@@ -81,7 +81,7 @@ class ResumenLiquidacionPdfService
             'factura' => $fr,
             'filas' => $filas,
             'total_importe' => self::fmtMoney($totalImporte),
-            'codigo_resumen' => $codigoResumen,
+            'codigo_resumen' => self::codigoResumenParaPdf($codigoResumen),
             'fecha_documento' => self::fechaDocumentoParaResumen($fr),
             'punto_venta_lineas' => $cabeceraDerecha,
             'filas_deducciones' => $deducciones['filas'],
@@ -97,34 +97,40 @@ class ResumenLiquidacionPdfService
         $fr->save();
     }
 
+    /** Texto del título en PDF: sin prefijo CO- (p. ej. 11/2026-26). */
+    public static function codigoResumenParaPdf(string $codigoResumen): string
+    {
+        $s = trim($codigoResumen);
+        if ($s === '') {
+            return '';
+        }
+
+        return (string) preg_replace('/^CO-/i', '', $s);
+    }
+
     /**
-     * Código MM/YY-N: mes/año de la fecha + correlativo de la autofactura.
-     * Ej.: CO-11/2026-26 con fecha junio 2026 → 06/26-11.
+     * Mismo identificador que la autofactura (p. ej. CO-11/2026-26).
      */
-    public static function codigoResumenMmYyDesdeAutofactura(string $nroFactura, $fechaReferencia): ?string
+    public static function codigoResumenDesdeNroFactura(string $nroFactura): ?string
     {
         $s = trim($nroFactura);
         if ($s === '' || strcasecmp($s, 'null') === 0) {
             return null;
         }
 
-        if (! preg_match('/^CO-(\d+)\/(\d{4})-(\d+)/i', $s, $m)) {
-            return null;
+        if (preg_match('/^CO-\d+\/\d{4}-\d+/i', $s)) {
+            return $s;
         }
 
-        $correlativo = (int) $m[1];
-        $fecha = $fechaReferencia ? Carbon::parse($fechaReferencia) : Carbon::now();
-
-        return $fecha->format('m/y') . '-' . $correlativo;
+        return null;
     }
 
     /**
-     * Prefiere MM/YY-{nº autofactura}; si no, el guardado o correlativo mensual.
+     * Prefiere el nº de autofactura; si no, el guardado o correlativo mensual MM/YY-N.
      */
     public static function resolverCodigoResumen(FacturaRecibida $fr, int $userId): string
     {
-        $fechaRef = $fr->fecha_resumen_liquidacion ?? $fr->fecha;
-        $desdeNro = self::codigoResumenMmYyDesdeAutofactura((string) ($fr->nro_factura ?? ''), $fechaRef);
+        $desdeNro = self::codigoResumenDesdeNroFactura((string) ($fr->nro_factura ?? ''));
         if ($desdeNro !== null) {
             return $desdeNro;
         }
@@ -133,6 +139,8 @@ class ResumenLiquidacionPdfService
         if ($existente !== '') {
             return $existente;
         }
+
+        $fechaRef = $fr->fecha_resumen_liquidacion ?? $fr->fecha;
 
         return self::siguienteCodigoResumen($userId, $fechaRef);
     }
@@ -391,26 +399,6 @@ class ResumenLiquidacionPdfService
         }
 
         return round($totalImporte, 2);
-    }
-
-    /**
-     * ¿Hay que volver a generar el PDF? (fichero ausente, fecha personalizada o código desactualizado).
-     */
-    public static function necesitaRegenerarResumenPdf(FacturaRecibida $fr): bool
-    {
-        $path = trim((string) ($fr->resumen_liquidacion ?? ''));
-        if ($path === '' || ! Storage::disk('recibos')->exists($path)) {
-            return true;
-        }
-
-        if (filled($fr->fecha_resumen_liquidacion)) {
-            return true;
-        }
-
-        $esperado = self::resolverCodigoResumen($fr, (int) $fr->user_id);
-        $actual = trim((string) ($fr->liquidacion_resumen_codigo ?? ''));
-
-        return $actual !== $esperado;
     }
 
     /**
