@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use App\Helpers\CorrelativoAutofacturaRecibida;
 use App\Helpers\GestorHelper;
 use App\Models\User;
+use App\Services\ResumenLiquidacionPdfService;
 use App\Services\SepaPain008RemesaService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -258,7 +259,7 @@ class FacturaRecibidasController extends Controller
         }
 
         $factura = GestorHelper::applyUserIdScope(
-            FacturaRecibida::query()->where('id', $id),
+            FacturaRecibida::with('liquidaciones')->where('id', $id),
             $request
         )->first();
 
@@ -267,11 +268,34 @@ class FacturaRecibidasController extends Controller
         }
 
         $path = trim((string) ($factura->resumen_liquidacion ?? ''));
-        if ($path === '') {
-            return response()->json(['error' => 'No hay resumen de liquidación para esta autofactura'], 404);
+        $needsRegen = $path === ''
+            || ! Storage::disk('recibos')->exists($path)
+            || filled($factura->fecha_resumen_liquidacion);
+
+        if ($needsRegen) {
+            if ($factura->liquidaciones->isEmpty()) {
+                return response()->json(['error' => 'No hay resumen de liquidación para esta autofactura'], 404);
+            }
+
+            try {
+                ResumenLiquidacionPdfService::regenerarParaFactura($factura);
+                $factura->refresh();
+                $path = trim((string) ($factura->resumen_liquidacion ?? ''));
+            } catch (\Throwable $e) {
+                Log::error('facturas-recibidas-resumen-liquidacion-pdf', [
+                    'id' => $id,
+                    'user_id' => $effectiveUserId,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Error al generar el resumen de liquidación',
+                    'message' => config('app.debug') ? $e->getMessage() : 'Error interno',
+                ], 500);
+            }
         }
 
-        if (! Storage::disk('recibos')->exists($path)) {
+        if ($path === '' || ! Storage::disk('recibos')->exists($path)) {
             return response()->json(['error' => 'El archivo de resumen no está disponible'], 404);
         }
 
@@ -525,6 +549,106 @@ class FacturaRecibidasController extends Controller
     }
 
     /**
+     * Cambia la fecha del documento en el PDF de resumen de liquidación y regenera el fichero.
+     */
+    public function cambiarFechaLiquidaciones(Request $request)
+    {
+        $effectiveUserId = GestorHelper::getUserId($request);
+
+        if (! $effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'min:1'],
+            'fecha' => ['required', 'date'],
+        ]);
+
+        $ids = array_values(array_unique(array_map('intval', $validated['ids'])));
+        $ids = array_filter($ids, fn ($id) => $id > 0);
+
+        if ($ids === []) {
+            return response()->json([
+                'message' => 'IDs de autofactura no válidos.',
+                'errors' => ['ids' => ['IDs no válidos.']],
+            ], 422);
+        }
+
+        $fecha = Carbon::parse($validated['fecha'])->format('Y-m-d');
+
+        $facturas = GestorHelper::applyUserIdScope(
+            FacturaRecibida::with(['liquidaciones'])->whereIn('id', $ids),
+            $request
+        )->get();
+
+        if ($facturas->count() !== count($ids)) {
+            return response()->json([
+                'message' => 'Alguna autofactura no existe o no pertenece a su cuenta.',
+                'errors' => ['ids' => ['Revise la selección.']],
+            ], 422);
+        }
+
+        $actualizadas = 0;
+        $omitidas = [];
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($facturas as $fr) {
+                if ($fr->liquidaciones->isEmpty()) {
+                    $omitidas[] = (int) $fr->id;
+                    continue;
+                }
+
+                $fr->fecha_resumen_liquidacion = $fecha;
+                $fr->save();
+
+                ResumenLiquidacionPdfService::regenerarParaFactura($fr->fresh(['liquidaciones']));
+
+                $actualizadas++;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('facturas-recibidas-cambiar-fecha-liquidaciones', [
+                'ids' => $ids,
+                'fecha' => $fecha,
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'No se pudo actualizar la fecha del resumen',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno',
+            ], 500);
+        }
+
+        if ($actualizadas === 0) {
+            return response()->json([
+                'message' => 'Ninguna autofactura seleccionada tiene liquidaciones asociadas.',
+                'errors' => ['ids' => ['Seleccione autofacturas generadas desde liquidaciones.']],
+                'omitidas' => $omitidas,
+            ], 422);
+        }
+
+        $message = $actualizadas === 1
+            ? 'Fecha del resumen actualizada en 1 autofactura.'
+            : "Fecha del resumen actualizada en {$actualizadas} autofacturas.";
+
+        if ($omitidas !== []) {
+            $message .= ' ' . count($omitidas) . ' sin liquidaciones asociadas (omitidas).';
+        }
+
+        return response()->json([
+            'message' => $message,
+            'actualizadas' => $actualizadas,
+            'omitidas' => $omitidas,
+            'fecha' => $fecha,
+        ], 200);
+    }
+
+    /**
      * Genera fichero XML pain.008 (remesa SEPA) para las autofacturas seleccionadas.
      */
     public function generarRemesa(Request $request, SepaPain008RemesaService $remesaService)
@@ -548,7 +672,7 @@ class FacturaRecibidasController extends Controller
         }
 
         $facturas = GestorHelper::applyUserIdScope(
-            FacturaRecibida::with(['proveedor.provincia'])->whereIn('id', $ids),
+            FacturaRecibida::with(['proveedor.provincia', 'liquidaciones'])->whereIn('id', $ids),
             $request
         )->get();
 

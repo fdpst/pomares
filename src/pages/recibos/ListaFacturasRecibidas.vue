@@ -31,6 +31,17 @@
                     <VBtn
                         rounded
                         depressed
+                        color="teal-darken-2"
+                        class="mt-1"
+                        :disabled="!puedeCambiarFechaLiquidaciones || guardandoFechaLiquidaciones"
+                        :loading="guardandoFechaLiquidaciones"
+                        title="Cambia la fecha que aparece en el PDF de resumen de liquidación"
+                        @click="abrirDialogFechaLiquidaciones">
+                        Cambiar fecha liquidaciones
+                    </VBtn>
+                    <VBtn
+                        rounded
+                        depressed
                         color="primary"
                         class="mt-1"
                         :to="'/form-facturas-recibidas'"
@@ -158,12 +169,54 @@
         @confirm="deleteFac"
         color="primary" />
 
+    <VDialog
+        v-model="dialogFechaLiquidaciones"
+        max-width="440"
+        persistent>
+        <VCard>
+            <VCardTitle class="text-h6 pa-4">
+                Cambiar fecha liquidaciones
+            </VCardTitle>
+            <VCardText class="pt-2 pb-0">
+                <p class="text-body-2 mb-4">
+                    Esta fecha aparecerá en la cabecera del PDF de resumen de
+                    liquidación de las autofacturas seleccionadas
+                    ({{ selected.length }}).
+                </p>
+                <AppDateTimePicker
+                    v-model="fechaLiquidaciones"
+                    label="Fecha en el resumen"
+                    prepend-icon="ri-calendar-fill"
+                />
+            </VCardText>
+            <VCardActions class="pa-4">
+                <VSpacer />
+                <VBtn
+                    variant="text"
+                    color="secondary"
+                    :disabled="guardandoFechaLiquidaciones"
+                    @click="cerrarDialogFechaLiquidaciones">
+                    Cancelar
+                </VBtn>
+                <VBtn
+                    class="btn-guardar-fecha-liquidaciones"
+                    color="#DCFF2E"
+                    :loading="guardandoFechaLiquidaciones"
+                    :disabled="!fechaLiquidaciones"
+                    @click="guardarFechaLiquidaciones">
+                    Guardar
+                </VBtn>
+            </VCardActions>
+        </VCard>
+    </VDialog>
+
 </template>
 
 <script>
 import {localizePrice} from "@/components/Transformations";
 import gestorClienteMixin from '@/global_mixins/gestorClienteMixin.js';
 import { effectiveBusinessUserId } from "@/utils/tenantContext";
+import { abrirPdfEnNuevaPestana } from "@/utils/pdfOpen";
 import { format_precio_autofactura } from "@/utils/format_precio.js";
 import { itemPasaFiltroFecha } from "@/utils/filtroFechaLista.js";
 import {
@@ -182,6 +235,9 @@ export default {
             item: "",
             selected: [],
             generandoRemesa: false,
+            dialogFechaLiquidaciones: false,
+            fechaLiquidaciones: null,
+            guardandoFechaLiquidaciones: false,
             search: "",
             fechaDesde: null,
             fechaHasta: null,
@@ -316,6 +372,81 @@ export default {
                 .catch(() => {
                     item.contabilizado = prev;
                     $toast.error("No se pudo actualizar contabilizado");
+                });
+        },
+        abrirDialogFechaLiquidaciones() {
+            if (!this.puedeCambiarFechaLiquidaciones) {
+                return;
+            }
+            const conResumen = this.selected.filter((row) => row.resumen_liquidacion);
+            const ref = conResumen[0] || this.selected[0];
+            this.fechaLiquidaciones =
+                ref?.fecha_resumen_liquidacion || ref?.fecha || null;
+            this.dialogFechaLiquidaciones = true;
+        },
+        cerrarDialogFechaLiquidaciones() {
+            this.dialogFechaLiquidaciones = false;
+            this.fechaLiquidaciones = null;
+        },
+        guardarFechaLiquidaciones() {
+            if (!this.fechaLiquidaciones || this.selected.length === 0) {
+                return;
+            }
+
+            const ids = this.selected
+                .filter((row) => row.resumen_liquidacion)
+                .map((row) => row.id);
+
+            if (ids.length === 0) {
+                $toast.error(
+                    "Ninguna autofactura seleccionada tiene resumen de liquidación"
+                );
+                return;
+            }
+
+            const payload = {
+                ids,
+                fecha: this.fechaLiquidaciones,
+                user_id: this.effectiveUserId,
+            };
+            const role = parseInt(localStorage.getItem("role"), 10);
+            const selectedCliente = localStorage.getItem("selected_cliente_id");
+            if ((role === 3 || role === 4) && selectedCliente) {
+                payload.cliente_id = selectedCliente;
+            }
+
+            this.guardandoFechaLiquidaciones = true;
+            axios
+                .post(
+                    "api/facturas-recibidas-cambiar-fecha-liquidaciones",
+                    payload
+                )
+                .then((res) => {
+                    const fecha = res.data?.fecha;
+                    ids.forEach((id) => {
+                        const row = this.facturaRecibidas.find((f) => f.id === id);
+                        if (row && fecha) {
+                            row.fecha_resumen_liquidacion = fecha;
+                        }
+                    });
+                    this.cerrarDialogFechaLiquidaciones();
+                    $toast.sucs(
+                        res.data?.message ||
+                            "Fecha del resumen actualizada correctamente"
+                    );
+                })
+                .catch((err) => {
+                    const data = err.response?.data;
+                    $toast.error(
+                        data?.message ||
+                            data?.error ||
+                            (data?.errors &&
+                                Object.values(data.errors).flat().join(" ")) ||
+                            "No se pudo cambiar la fecha del resumen"
+                    );
+                })
+                .finally(() => {
+                    this.guardandoFechaLiquidaciones = false;
                 });
         },
         generarRemesa() {
@@ -458,97 +589,30 @@ export default {
                 });
         },
         verPdfAutofactura(item) {
-            axios
-                .get(`api/facturas-recibidas-pdf/${item.id}`, {
-                    params: {
-                        user_id: this.effectiveUserId,
-                        _t: Date.now(),
-                    },
-                    responseType: "blob",
-                })
-                .then((response) => {
-                    const blob = response.data;
-                    if (blob.type === "application/json") {
-                        blob.text().then((t) => {
-                            try {
-                                const j = JSON.parse(t);
-                                $toast.error(
-                                    j.error || j.message || "Error al generar PDF"
-                                );
-                            } catch {
-                                $toast.error("Error al generar PDF");
-                            }
-                        });
-                        return;
-                    }
-                    const nro =
-                        item.nro_factura && item.nro_factura !== "null"
-                            ? String(item.nro_factura).replace(
-                                  /[^a-zA-Z0-9_-]+/g,
-                                  "_"
-                              )
-                            : "sin_numero";
-                    const url = URL.createObjectURL(blob);
-                    const win = window.open(url, "_blank", "noopener,noreferrer");
-                    if (!win) {
-                        URL.revokeObjectURL(url);
-                        $toast.error(
-                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
-                        );
-                        return;
-                    }
-                    setTimeout(() => URL.revokeObjectURL(url), 120000);
-                })
-                .catch(() => {
-                    $toast.error("Error al generar PDF");
-                });
-        },
-        verPdfResumenLiquidacion(item) {
-            if (!item?.id || !item.resumen_liquidacion) {
+            if (!item?.id) {
                 return;
             }
-            axios
-                .get(
-                    `api/facturas-recibidas-resumen-liquidacion-pdf/${item.id}`,
-                    {
-                        params: {
-                            user_id: this.effectiveUserId,
-                            _t: Date.now(),
-                        },
-                        responseType: "blob",
-                    }
-                )
-                .then((response) => {
-                    const blob = response.data;
-                    if (blob.type === "application/json") {
-                        blob.text().then((t) => {
-                            try {
-                                const j = JSON.parse(t);
-                                $toast.error(
-                                    j.error ||
-                                        j.message ||
-                                        "Resumen no disponible"
-                                );
-                            } catch {
-                                $toast.error("Resumen no disponible");
-                            }
-                        });
-                        return;
-                    }
-                    const url = URL.createObjectURL(blob);
-                    const win = window.open(url, "_blank", "noopener,noreferrer");
-                    if (!win) {
-                        URL.revokeObjectURL(url);
-                        $toast.error(
-                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
-                        );
-                        return;
-                    }
-                    setTimeout(() => URL.revokeObjectURL(url), 120000);
-                })
-                .catch(() => {
-                    $toast.error("Error al abrir el resumen de liquidación");
-                });
+            const result = abrirPdfEnNuevaPestana(
+                `api/facturas-recibidas-pdf/${item.id}`
+            );
+            if (!result.ok) {
+                $toast.error(
+                    "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                );
+            }
+        },
+        verPdfResumenLiquidacion(item) {
+            if (!item?.id) {
+                return;
+            }
+            const result = abrirPdfEnNuevaPestana(
+                `api/facturas-recibidas-resumen-liquidacion-pdf/${item.id}`
+            );
+            if (!result.ok) {
+                $toast.error(
+                    "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                );
+            }
         },
         deleteFac(item) {
             this.modalEliminar = false;
@@ -600,6 +664,31 @@ export default {
                 itemPasaFiltroFecha(row.fecha, this.fechaDesde, this.fechaHasta)
             );
         },
+        puedeCambiarFechaLiquidaciones() {
+            return (
+                this.selected.length > 0 &&
+                this.selected.some((row) => row.resumen_liquidacion)
+            );
+        },
     },
 };
 </script>
+
+<style scoped>
+.btn-guardar-fecha-liquidaciones {
+    background-color: #dcff2e !important;
+    color: #000 !important;
+    font-weight: 600;
+}
+
+.btn-guardar-fecha-liquidaciones:hover,
+.btn-guardar-fecha-liquidaciones:focus,
+.btn-guardar-fecha-liquidaciones:active {
+    background-color: #dcff2e !important;
+    color: #000 !important;
+}
+
+.btn-guardar-fecha-liquidaciones:disabled {
+    opacity: 0.55;
+}
+</style>

@@ -59,8 +59,16 @@
                 <tr>
                     <td class="num">{{ $f['cantidad'] ?? '' }}</td>
                     <td class="concepto">{{ $f['concepto'] ?? '' }}</td>
-                    <td class="num">@if(($f['precio_unit'] ?? '') !== ''){{ $f['precio_unit'] }}&nbsp;€@endif</td>
-                    <td class="num">@if(($f['importe'] ?? '') !== ''){{ $f['importe'] }}&nbsp;€@endif</td>
+                    <td class="num">
+                        @if(filled($f['precio_unit'] ?? null))
+                            {{ $f['precio_unit'] }}&nbsp;€
+                        @endif
+                    </td>
+                    <td class="num">
+                        @if(filled($f['importe'] ?? null))
+                            {{ $f['importe'] }}&nbsp;€
+                        @endif
+                    </td>
                 </tr>
             @endforeach
         </tbody>
@@ -88,8 +96,16 @@
                     <tr>
                         <td class="num">{{ $d['cantidad'] ?? '' }}</td>
                         <td class="concepto">{{ $d['concepto'] ?? '' }}</td>
-                        <td class="num">@if(($d['precio'] ?? '') !== ''){{ $d['precio'] }}&nbsp;€@endif</td>
-                        <td class="num">@if(($d['importe'] ?? '') !== ''){{ $d['importe'] }}&nbsp;€@endif</td>
+                        <td class="num">
+                            @if(filled($d['precio'] ?? null))
+                                {{ $d['precio'] }}&nbsp;€
+                            @endif
+                        </td>
+                        <td class="num">
+                            @if(filled($d['importe'] ?? null))
+                                {{ $d['importe'] }}&nbsp;€
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

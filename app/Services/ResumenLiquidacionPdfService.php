@@ -83,9 +83,7 @@ class ResumenLiquidacionPdfService
             'filas' => $filas,
             'total_importe' => self::fmtMoney($totalImporte),
             'codigo_resumen' => $codigoResumen,
-            'fecha_documento' => $fr->fecha
-                ? Carbon::parse($fr->fecha)->format('d/m/Y')
-                : Carbon::now()->format('d/m/Y'),
+            'fecha_documento' => self::fechaDocumentoParaResumen($fr),
             'punto_venta_lineas' => $cabeceraDerecha,
             'filas_deducciones' => $deducciones['filas'],
             'mostrar_deducciones' => $deducciones['mostrar'],
@@ -304,6 +302,48 @@ class ResumenLiquidacionPdfService
         }
 
         return $lineas;
+    }
+
+    /**
+     * Regenera el PDF de resumen para una autofactura con liquidaciones vinculadas.
+     */
+    public static function regenerarParaFactura(FacturaRecibida $fr): void
+    {
+        if (! $fr->relationLoaded('liquidaciones')) {
+            $fr->load('liquidaciones');
+        }
+
+        if ($fr->liquidaciones->isEmpty()) {
+            throw new \RuntimeException('No hay liquidaciones asociadas a esta autofactura.');
+        }
+
+        $idOrder = $fr->liquidaciones
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $byId = Liquidacion::with(['items.servicio', 'proveedor'])
+            ->whereIn('id', $idOrder)
+            ->get()
+            ->keyBy('id');
+
+        $liqsOrdered = collect($idOrder)
+            ->map(fn ($id) => $byId->get($id))
+            ->filter()
+            ->values();
+
+        self::generarYAdjuntar($fr->fresh(), $liqsOrdered, (int) $fr->user_id);
+    }
+
+    public static function fechaDocumentoParaResumen(FacturaRecibida $fr): string
+    {
+        $raw = $fr->fecha_resumen_liquidacion ?? $fr->fecha;
+
+        return $raw
+            ? Carbon::parse($raw)->format('d/m/Y')
+            : Carbon::now()->format('d/m/Y');
     }
 
     private static function fmtMoney(float $v): string

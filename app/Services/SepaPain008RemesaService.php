@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FacturaRecibida;
+use App\Models\Liquidacion;
 use App\Models\Proveedor;
 use App\Models\User;
 use Carbon\Carbon;
@@ -40,7 +41,13 @@ class SepaPain008RemesaService
                 continue;
             }
 
-            $amount = round((float) $group->sum(fn (FacturaRecibida $f) => (float) $f->total), 2);
+            $amount = round((float) $group->sum(fn (FacturaRecibida $f) => $this->amountFromLiquidaciones($f, $warnings)), 2);
+
+            if ($amount <= 0) {
+                $warnings['mensajes'][] = 'Punto de venta ' . $this->proveedorLabel($proveedor) . ': importe 0 (revise liquidaciones asociadas); no incluido en el XML.';
+                continue;
+            }
+
             $rmtLines = $group->map(fn (FacturaRecibida $f) => $this->buildRemittanceInfo($f))->all();
             $rmtInf = $this->joinRemittanceInfo($rmtLines);
 
@@ -264,6 +271,34 @@ class SepaPain008RemesaService
                 'ids' => ['Seleccione al menos una autofactura.'],
             ]);
         }
+    }
+
+    /**
+     * Importe de remesa = suma de liquidaciones vinculadas a la autofactura (importe a liquidar).
+     *
+     * @param  array{empresa: array, proveedores: array, mensajes: array<int, string>}  $warnings
+     */
+    private function amountFromLiquidaciones(FacturaRecibida $factura, array &$warnings): float
+    {
+        if (! $factura->relationLoaded('liquidaciones')) {
+            $factura->load('liquidaciones');
+        }
+
+        $liquidaciones = $factura->liquidaciones;
+        if ($liquidaciones->isEmpty()) {
+            $nro = trim((string) $factura->nro_factura);
+            if ($nro === '' || strcasecmp($nro, 'null') === 0) {
+                $nro = (string) $factura->id;
+            }
+            $warnings['mensajes'][] = "Autofactura {$nro}: sin liquidaciones asociadas; importe 0 en la remesa.";
+
+            return 0.0;
+        }
+
+        return round(
+            (float) $liquidaciones->sum(fn (Liquidacion $liq) => (float) $liq->total),
+            2
+        );
     }
 
     private function buildRemittanceInfo(FacturaRecibida $factura): string

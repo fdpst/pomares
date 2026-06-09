@@ -24,6 +24,7 @@ class FacturaRecibida extends Model
       "imagen",
       "resumen_liquidacion",
       "liquidacion_resumen_codigo",
+      "fecha_resumen_liquidacion",
       "total",
       "contabilizado",
     ];

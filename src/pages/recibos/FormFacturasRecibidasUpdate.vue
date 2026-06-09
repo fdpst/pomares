@@ -382,6 +382,7 @@
 <script>
 import DialogArticulos from "./../articulos/DialogArticulos.vue";
 import { effectiveBusinessUserId } from "@/utils/tenantContext";
+import { abrirPdfEnNuevaPestana } from "@/utils/pdfOpen";
 import { format_precio_autofactura } from "@/utils/format_precio.js";
 
 export default {
@@ -578,97 +579,28 @@ export default {
             if (!this.facturaRec.id) {
                 return;
             }
-            axios
-                .get(`api/facturas-recibidas-pdf/${this.facturaRec.id}`, {
-                    params: {
-                        _t: Date.now(),
-                    },
-                    responseType: "blob",
-                })
-                .then((response) => {
-                    const blob = response.data;
-                    if (blob.type === "application/json") {
-                        blob.text().then((t) => {
-                            try {
-                                const j = JSON.parse(t);
-                                $toast.error(
-                                    j.error || j.message || "Error al generar PDF"
-                                );
-                            } catch {
-                                $toast.error("Error al generar PDF");
-                            }
-                        });
-                        return;
-                    }
-                    const nro =
-                        this.facturaRec.nro_factura &&
-                        this.facturaRec.nro_factura !== "null"
-                            ? String(this.facturaRec.nro_factura).replace(
-                                  /[^a-zA-Z0-9_-]+/g,
-                                  "_"
-                              )
-                            : "sin_numero";
-                    const url = URL.createObjectURL(blob);
-                    const win = window.open(url, "_blank", "noopener,noreferrer");
-                    if (!win) {
-                        URL.revokeObjectURL(url);
-                        $toast.error(
-                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
-                        );
-                        return;
-                    }
-                    setTimeout(() => URL.revokeObjectURL(url), 120000);
-                })
-                .catch(() => {
-                    $toast.error("Error al generar PDF");
-                });
+            const result = abrirPdfEnNuevaPestana(
+                `api/facturas-recibidas-pdf/${this.facturaRec.id}`
+            );
+            if (!result.ok) {
+                $toast.error(
+                    "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                );
+            }
         },
 
         verPdfResumenLiquidacion() {
-            if (!this.facturaRec.id || !this.facturaRec.resumen_liquidacion) {
+            if (!this.facturaRec.id) {
                 return;
             }
-            axios
-                .get(
-                    `api/facturas-recibidas-resumen-liquidacion-pdf/${this.facturaRec.id}`,
-                    {
-                        params: {
-                            _t: Date.now(),
-                        },
-                        responseType: "blob",
-                    }
-                )
-                .then((response) => {
-                    const blob = response.data;
-                    if (blob.type === "application/json") {
-                        blob.text().then((t) => {
-                            try {
-                                const j = JSON.parse(t);
-                                $toast.error(
-                                    j.error ||
-                                        j.message ||
-                                        "No hay resumen disponible"
-                                );
-                            } catch {
-                                $toast.error("No hay resumen disponible");
-                            }
-                        });
-                        return;
-                    }
-                    const url = URL.createObjectURL(blob);
-                    const win = window.open(url, "_blank", "noopener,noreferrer");
-                    if (!win) {
-                        URL.revokeObjectURL(url);
-                        $toast.error(
-                            "Permita ventanas emergentes para ver el PDF en otra pestaña"
-                        );
-                        return;
-                    }
-                    setTimeout(() => URL.revokeObjectURL(url), 120000);
-                })
-                .catch(() => {
-                    $toast.error("Error al abrir el resumen de liquidación");
-                });
+            const result = abrirPdfEnNuevaPestana(
+                `api/facturas-recibidas-resumen-liquidacion-pdf/${this.facturaRec.id}`
+            );
+            if (!result.ok) {
+                $toast.error(
+                    "Permita ventanas emergentes para ver el PDF en otra pestaña"
+                );
+            }
         },
 
         saveFactRecibidas() {
