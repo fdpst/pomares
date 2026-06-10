@@ -497,7 +497,7 @@ class LiquidacionesController extends Controller
                 DB::rollBack();
 
                 return response()->json([
-                    'error' => 'Ninguna liquidación con punto de venta tiene comisión calculable (productos con comisión en el punto de venta).',
+                    'error' => 'Ninguna liquidación seleccionada tiene punto de venta (proveedor) asignado.',
                     'omitidas' => $omitidas,
                 ], 422);
             }
@@ -529,6 +529,7 @@ class LiquidacionesController extends Controller
     /**
      * Desglose de comisiones por liquidación: cantidad = suma de unidades con comisión;
      * precio = comisión neta unitaria media; IVA 21%; total línea = neto + cuota.
+     * Si el punto de venta no tiene comisiones configuradas, devuelve desglose con importe 0.
      */
     private function desgloseComisionLiquidacion(Liquidacion $liq): ?array
     {
@@ -562,8 +563,18 @@ class LiquidacionesController extends Controller
         }
 
         $sumaComision = round($sumaComision, 4);
+
+        // Sin comisión configurada o comisión 0: autofactura igualmente, con importe 0.
         if ($sumaComision <= 0) {
-            return null;
+            $cantidadSinComision = (float) $liq->items->sum(fn ($it) => (float) $it->cantidad);
+
+            return [
+                'cantidad' => $cantidadSinComision > 0 ? round($cantidadSinComision, 4) : 1.0,
+                'precio' => 0.0,
+                'dcto' => 0,
+                'iva' => 21,
+                'total' => 0.0,
+            ];
         }
 
         $cantidadLinea = $sumaCantidad > 0 ? round($sumaCantidad, 4) : 1.0;
