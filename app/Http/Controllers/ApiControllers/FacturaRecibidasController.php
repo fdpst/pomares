@@ -19,8 +19,10 @@ use Illuminate\Support\Facades\DB;
 use App\Helpers\CorrelativoAutofacturaRecibida;
 use App\Helpers\GestorHelper;
 use App\Models\User;
+use App\Mail\LiquidacionesPuntoVentaMail;
 use App\Services\ResumenLiquidacionPdfService;
 use App\Services\SepaPain008RemesaService;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -639,6 +641,118 @@ class FacturaRecibidasController extends Controller
             'actualizadas' => $actualizadas,
             'omitidas' => $omitidas,
             'fecha' => $fecha,
+        ], 200);
+    }
+
+    /**
+     * Envía por email al punto de venta la autofactura y el resumen de liquidación en PDF.
+     */
+    public function enviarLiquidaciones(Request $request)
+    {
+        $effectiveUserId = GestorHelper::getUserId($request);
+
+        if (! $effectiveUserId) {
+            return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+        }
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'min:1'],
+        ]);
+
+        $ids = array_values(array_unique(array_map('intval', $validated['ids'])));
+
+        $facturas = GestorHelper::applyUserIdScope(
+            FacturaRecibida::with(['proveedor.provincia', 'items', 'liquidaciones'])->whereIn('id', $ids),
+            $request
+        )->get();
+
+        if ($facturas->count() !== count($ids)) {
+            return response()->json([
+                'message' => 'Alguna autofactura no existe o no pertenece a su cuenta.',
+                'errors' => ['ids' => ['Revise la selección.']],
+            ], 422);
+        }
+
+        $enviadas = 0;
+        $omitidas = [];
+
+        foreach ($facturas as $factura) {
+            $nro = trim((string) $factura->nro_factura);
+            if ($nro === '' || strcasecmp($nro, 'null') === 0) {
+                $nro = (string) $factura->id;
+            }
+
+            $email = trim((string) ($factura->proveedor->email ?? ''));
+            if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $omitidas[] = "Autofactura {$nro}: el punto de venta no tiene email válido configurado.";
+                continue;
+            }
+
+            try {
+                $userLog = User::query()->where('id', $factura->user_id)->with('provincia')->first();
+
+                $slug = preg_replace('/[^a-zA-Z0-9_-]+/', '_', $nro);
+                $adjuntos = [];
+
+                $pdfAutofactura = PDF::loadView('pdf.factura_recibida_individual', [
+                    'factura' => $factura,
+                    'items' => $factura->items,
+                    'userLog' => $userLog,
+                ])->setPaper('a4', 'portrait');
+
+                $adjuntos[] = [
+                    'data' => $pdfAutofactura->output(),
+                    'name' => 'autofactura_' . $slug . '.pdf',
+                ];
+
+                if ($factura->liquidaciones->isNotEmpty()) {
+                    ResumenLiquidacionPdfService::regenerarParaFactura($factura);
+                    $factura->refresh();
+                    $pathResumen = trim((string) ($factura->resumen_liquidacion ?? ''));
+                    if ($pathResumen !== '' && Storage::disk('recibos')->exists($pathResumen)) {
+                        $adjuntos[] = [
+                            'data' => Storage::disk('recibos')->get($pathResumen),
+                            'name' => 'resumen_liquidacion_' . $slug . '.pdf',
+                        ];
+                    }
+                }
+
+                Mail::to($email)->send(new LiquidacionesPuntoVentaMail(
+                    'Autofactura ' . $nro . ' y resumen de liquidación',
+                    $adjuntos
+                ));
+
+                $enviadas++;
+            } catch (\Throwable $e) {
+                Log::error('facturas-recibidas-enviar-liquidaciones', [
+                    'id' => $factura->id,
+                    'email' => $email,
+                    'message' => $e->getMessage(),
+                ]);
+                $omitidas[] = "Autofactura {$nro}: error al enviar el correo.";
+            }
+        }
+
+        if ($enviadas === 0) {
+            return response()->json([
+                'message' => 'No se pudo enviar ningún correo. ' . implode(' ', $omitidas),
+                'omitidas' => $omitidas,
+            ], 422);
+        }
+
+        $message = $enviadas === 1
+            ? 'Correo enviado a 1 punto de venta.'
+            : "Correos enviados a {$enviadas} puntos de venta.";
+
+        if ($omitidas !== []) {
+            $message .= ' ' . implode(' ', $omitidas);
+        }
+
+        return response()->json([
+            'message' => $message,
+            'enviadas' => $enviadas,
+            'omitidas' => $omitidas,
         ], 200);
     }
 

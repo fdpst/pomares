@@ -42,6 +42,17 @@
                     <VBtn
                         rounded
                         depressed
+                        color="info"
+                        class="mt-1"
+                        :disabled="selected.length === 0 || enviandoLiquidaciones"
+                        :loading="enviandoLiquidaciones"
+                        title="Envía por email al punto de venta la autofactura y el resumen de liquidación"
+                        @click="enviarLiquidaciones">
+                        Enviar liquidaciones
+                    </VBtn>
+                    <VBtn
+                        rounded
+                        depressed
                         color="primary"
                         class="mt-1"
                         :to="'/form-facturas-recibidas'"
@@ -235,6 +246,7 @@ export default {
             item: "",
             selected: [],
             generandoRemesa: false,
+            enviandoLiquidaciones: false,
             dialogFechaLiquidaciones: false,
             fechaLiquidaciones: null,
             guardandoFechaLiquidaciones: false,
@@ -447,6 +459,48 @@ export default {
                 })
                 .finally(() => {
                     this.guardandoFechaLiquidaciones = false;
+                });
+        },
+        enviarLiquidaciones() {
+            if (this.selected.length === 0) {
+                return;
+            }
+
+            const payload = {
+                ids: this.selected.map((row) => row.id),
+                user_id: this.effectiveUserId,
+            };
+            const role = parseInt(localStorage.getItem("role"), 10);
+            const selectedCliente = localStorage.getItem("selected_cliente_id");
+            if ((role === 3 || role === 4) && selectedCliente) {
+                payload.cliente_id = selectedCliente;
+            }
+
+            this.enviandoLiquidaciones = true;
+            axios
+                .post("api/facturas-recibidas-enviar-liquidaciones", payload)
+                .then((res) => {
+                    const omitidas = res.data?.omitidas || [];
+                    const msg =
+                        res.data?.message || "Correos enviados correctamente";
+                    if (omitidas.length > 0) {
+                        $toast.warn(msg);
+                    } else {
+                        $toast.sucs(msg);
+                    }
+                })
+                .catch((err) => {
+                    const data = err.response?.data;
+                    $toast.error(
+                        data?.message ||
+                            data?.error ||
+                            (data?.errors &&
+                                Object.values(data.errors).flat().join(" ")) ||
+                            "Error al enviar las liquidaciones"
+                    );
+                })
+                .finally(() => {
+                    this.enviandoLiquidaciones = false;
                 });
         },
         generarRemesa() {

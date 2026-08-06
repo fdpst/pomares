@@ -165,6 +165,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::post('facturas-recibidas-delete/{idFactRec}', 'FacturaRecibidasController@destroy');
   Route::post('facturas-recibidas-generar-remesa', 'FacturaRecibidasController@generarRemesa');
   Route::post('facturas-recibidas-cambiar-fecha-liquidaciones', 'FacturaRecibidasController@cambiarFechaLiquidaciones');
+  Route::post('facturas-recibidas-enviar-liquidaciones', 'FacturaRecibidasController@enviarLiquidaciones');
   Route::get('get-data-albaranes/{cliente_id}', 'FacturaController@getDataAlbaranes');
   Route::post('duplicar-factura-recibida', 'FacturaRecibidasController@duplicarFactura');
 
