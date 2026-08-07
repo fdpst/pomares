@@ -162,6 +162,12 @@
             text-align: right;
             font-weight: bold;
         }
+
+        .totales tr.fila-total td {
+            border-top: 1px solid #bbb;
+            font-weight: bold;
+            font-size: 14px;
+        }
     </style>
 </head>
 
@@ -267,9 +273,37 @@
     </div>
     @endif
 
+    @php
+        $baseImponible = 0.0;
+        $ivasPorTipo = [];
+        if ($hayItems) {
+            foreach ($items as $item) {
+                $c = (float) ($item->cantidad ?? 0);
+                $pu = (float) ($item->precio ?? 0);
+                $d = (float) ($item->dcto ?? 0);
+                $tipoIva = (float) ($item->iva ?? 0);
+                $base = $c * $pu * (1 - $d / 100);
+                $baseImponible += $base;
+                $clave = number_format($tipoIva, 0);
+                $ivasPorTipo[$clave] = ($ivasPorTipo[$clave] ?? 0) + $base * $tipoIva / 100;
+            }
+        }
+    @endphp
     <div class="totales">
         <table>
+            @if($hayItems)
             <tr>
+                <td>Base imponible:</td>
+                <td>{{ number_format($baseImponible, 2, ',', '.') }} €</td>
+            </tr>
+            @foreach($ivasPorTipo as $tipo => $cuota)
+            <tr>
+                <td>IVA {{ $tipo }}%:</td>
+                <td>{{ number_format($cuota, 2, ',', '.') }} €</td>
+            </tr>
+            @endforeach
+            @endif
+            <tr class="fila-total">
                 <td>Total factura:</td>
                 <td>{{ number_format($factura->total ?? 0, 2, ',', '.') }} €</td>
             </tr>
