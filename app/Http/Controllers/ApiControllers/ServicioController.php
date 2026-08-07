@@ -116,9 +116,31 @@ class ServicioController extends Controller
     $rows = GestorHelper::applyUserIdScope(
       ServicioPrecioCambio::query()->where('servicio_id', $servicio->id)->orderByDesc('id'),
       $request
-    )->get(['precio_anterior', 'precio_nuevo', 'created_at']);
+    )->get(['id', 'precio_anterior', 'precio_nuevo', 'created_at']);
 
     return response()->json($rows, 200);
+  }
+
+  public function deleteServicioPrecioCambio(Request $request, $id)
+  {
+    $effectiveUserId = GestorHelper::getUserId($request);
+
+    if (!$effectiveUserId) {
+      return response()->json(['error' => 'No tiene acceso a este recurso'], 403);
+    }
+
+    $cambio = GestorHelper::applyUserIdScope(
+      ServicioPrecioCambio::query()->where('id', (int) $id),
+      $request
+    )->first();
+
+    if (!$cambio) {
+      return response()->json(['error' => 'Registro no encontrado'], 404);
+    }
+
+    $cambio->delete();
+
+    return response()->json(['message' => 'Registro eliminado'], 200);
   }
 
   public function saveServicio(Request $request)

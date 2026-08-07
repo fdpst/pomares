@@ -102,6 +102,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
   Route::get('get-servicio-by-id/{servicio_id}', 'ServicioController@getServicioByid');
   Route::post('save-servicio', 'ServicioController@saveServicio');
   Route::get('servicio-precio-cambios/{servicio_id}', 'ServicioController@getServicioPrecioCambios');
+  Route::delete('servicio-precio-cambios/{id}', 'ServicioController@deleteServicioPrecioCambio');
   Route::get('delete-servicio/{id}', 'ServicioController@deleteServicio');
   Route::get('servicio/numero/{venta}', 'ServicioController@getLastNumber');
   /*Rutas Albaranes*/

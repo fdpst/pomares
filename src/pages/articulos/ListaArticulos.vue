@@ -208,10 +208,11 @@
                 <th class="text-start">Cambio registrado</th>
                 <th class="text-start">Precio anterior</th>
                 <th class="text-start">Precio nuevo</th>
+                <th class="text-center" style="width: 56px;"></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, idx) in logPrecioItems" :key="idx">
+              <tr v-for="(row, idx) in logPrecioItems" :key="row.id ?? idx">
                 <td class="text-nowrap align-top">{{ formatFechaHoraPrecio(row.created_at) }}</td>
                 <td class="align-top">
                   <div class="font-weight-medium text-end text-sm-start">
@@ -235,6 +236,19 @@
                     </template>
                   </div>
                 </td>
+                <td class="text-center align-top">
+                  <VBtn
+                    icon
+                    size="small"
+                    variant="text"
+                    color="error"
+                    title="Eliminar este registro del historial"
+                    :loading="deletingLogPrecioId === row.id"
+                    @click="pedirEliminarLogPrecio(row)"
+                  >
+                    <VIcon>ri-delete-bin-line</VIcon>
+                  </VBtn>
+                </td>
               </tr>
             </tbody>
           </VTable>
@@ -245,6 +259,14 @@
       </VCardText>
     </VCard>
   </VDialog>
+
+  <ConfirmDialog
+    v-model="modalEliminarLogPrecio"
+    color="error"
+    text="¿Eliminar este registro del historial de precios?"
+    @cancel="modalEliminarLogPrecio = false; logPrecioAEliminar = null"
+    @confirm="eliminarLogPrecio"
+  />
 </template>
 
 <script>
@@ -268,6 +290,9 @@ export default {
       loadingLogPrecio: false,
       logPrecioItems: [],
       logPrecioDescripcion: "",
+      modalEliminarLogPrecio: false,
+      logPrecioAEliminar: null,
+      deletingLogPrecioId: null,
       item: "",
       search: "",
       fechaDesde: null,
@@ -439,6 +464,32 @@ export default {
         })
         .finally(() => {
           this.loadingLogPrecio = false;
+        });
+    },
+    pedirEliminarLogPrecio(row) {
+      if (!row || !row.id) return;
+      this.logPrecioAEliminar = row;
+      this.modalEliminarLogPrecio = true;
+    },
+    eliminarLogPrecio() {
+      const row = this.logPrecioAEliminar;
+      this.modalEliminarLogPrecio = false;
+      this.logPrecioAEliminar = null;
+      if (!row || !row.id) return;
+
+      this.deletingLogPrecioId = row.id;
+      axios
+        .delete(`api/servicio-precio-cambios/${row.id}`)
+        .then(() => {
+          $toast.sucs("Registro eliminado");
+          const restantes = this.logPrecioItems.filter((r) => r.id !== row.id);
+          this.logPrecioItems = this.enriquecerVigenciasPrecioLog(restantes);
+        })
+        .catch(() => {
+          $toast.error("No se pudo eliminar el registro");
+        })
+        .finally(() => {
+          this.deletingLogPrecioId = null;
         });
     },
     /** Fecha calendario local en formato dd/mm/aaaa */
