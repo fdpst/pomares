@@ -158,9 +158,16 @@
             font-size: 13px;
         }
 
-        .totales td:first-child {
+        .totales td.etiqueta {
+            width: 60%;
             text-align: right;
             font-weight: bold;
+        }
+
+        .totales td.importe {
+            width: 40%;
+            text-align: right;
+            white-space: nowrap;
         }
 
         .totales tr.fila-total td {
@@ -293,19 +300,19 @@
         <table>
             @if($hayItems)
             <tr>
-                <td>Base imponible:</td>
-                <td>{{ number_format($baseImponible, 2, ',', '.') }} €</td>
+                <td class="etiqueta">Base imponible:</td>
+                <td class="importe">{{ number_format($baseImponible, 2, ',', '.') }} €</td>
             </tr>
             @foreach($ivasPorTipo as $tipo => $cuota)
             <tr>
-                <td>IVA {{ $tipo }}%:</td>
-                <td>{{ number_format($cuota, 2, ',', '.') }} €</td>
+                <td class="etiqueta">IVA {{ $tipo }}%:</td>
+                <td class="importe">{{ number_format($cuota, 2, ',', '.') }} €</td>
             </tr>
             @endforeach
             @endif
             <tr class="fila-total">
-                <td>Total factura:</td>
-                <td>{{ number_format($factura->total ?? 0, 2, ',', '.') }} €</td>
+                <td class="etiqueta">Total factura:</td>
+                <td class="importe">{{ number_format($factura->total ?? 0, 2, ',', '.') }} €</td>
             </tr>
         </table>
     </div>
