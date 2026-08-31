@@ -27,7 +27,7 @@
                     <VCol
                         cols="12"
                         md="4">
-                        <VSelect
+                        <VAutocomplete
                             filled
                             v-model="facturaRec.proveedor_id"
                             :error-messages="
@@ -39,7 +39,8 @@
                             item-title="nombre"
                             item-value="id"
                             label="Punto de venta"
-                            :rules="[requiredValidator]"></VSelect>
+                            clearable
+                            :rules="[requiredValidator]"></VAutocomplete>
                     </VCol>
 
                     <VCol
